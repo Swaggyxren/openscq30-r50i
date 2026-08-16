@@ -15,15 +15,15 @@ use cosmic::{
     widget::{self, menu::KeyBind, nav_bar},
 };
 use i18n_embed::unic_langid::LanguageIdentifier;
-use macaddr::MacAddr6;
 use openscq30_i18n::Translate;
-use openscq30_lib::{OpenSCQ30Session, device::OpenSCQ30Device, storage::PairedDevice};
+use openscq30_lib::{
+    DeviceModel, OpenSCQ30Session, device::OpenSCQ30Device, storage::PairedDevice,
+};
 use tokio::{select, sync::Semaphore};
 
 use crate::{
     add_device::{self, AddDeviceModel},
     config::Config,
-    device_selection::{self, DeviceSelectionModel},
     device_settings, fl,
     utils::coalesce_result,
 };
@@ -31,7 +31,6 @@ use crate::{
 pub struct AppModel {
     core: Core,
     screen: Screen,
-    dialog_page: Option<DialogPage>,
     session: Arc<OpenSCQ30Session>,
     warnings: VecDeque<String>,
     config: Config,
@@ -46,7 +45,6 @@ pub struct AppModel {
 #[derive(Clone, Copy)]
 enum KeyBindAction {
     Settings,
-    CloseDialog,
 }
 
 pub struct AppFlags {
@@ -61,22 +59,18 @@ enum ContextDrawerScreen {
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    DeviceSelectionScreen(device_selection::Message),
     AddDeviceScreen(add_device::Message),
     DeviceSettingsScreen(device_settings::Message),
-    CloseDialog,
-    RemovePairedDevice(MacAddr6),
-    BackToDeviceSelection,
     ActivateConnectToDeviceScreen(DebugOpenSCQ30Device),
-    CloseDialogAndRefreshPairedDevices,
-    ActivateDeviceSelectionScreen,
+    ConnectToDevice(PairedDevice),
+    ConnectToDeviceFailed(String),
+    CancelConnectToDevice,
+    ShowAddDevice,
     Warning(String),
     CloseWarning,
     ToggleAbout,
     OpenUrl(String),
     CloseContextDrawer,
-    ConnectToDeviceFailed(String),
-    CancelConnectToDevice,
     ToggleSettings,
     None,
     SetPreferredLanguage(usize),
@@ -87,11 +81,6 @@ pub enum Message {
     },
 }
 
-impl From<device_selection::Message> for Message {
-    fn from(message: device_selection::Message) -> Self {
-        Self::DeviceSelectionScreen(message)
-    }
-}
 impl From<add_device::Message> for Message {
     fn from(message: add_device::Message) -> Self {
         Self::AddDeviceScreen(message)
@@ -102,6 +91,7 @@ impl From<device_settings::Message> for Message {
         Self::DeviceSettingsScreen(message)
     }
 }
+
 #[derive(Clone)]
 pub struct DebugOpenSCQ30Device(pub Arc<dyn OpenSCQ30Device + Send + Sync>);
 impl std::fmt::Debug for DebugOpenSCQ30Device {
@@ -117,13 +107,8 @@ impl Deref for DebugOpenSCQ30Device {
     }
 }
 
-enum DialogPage {
-    RemoveDevice(PairedDevice),
-}
-
 #[allow(clippy::large_enum_variant)]
 enum Screen {
-    DeviceSelection(device_selection::DeviceSelectionModel),
     AddDevice(add_device::AddDeviceModel),
     Connecting {
         canceled: Arc<Semaphore>,
@@ -142,6 +127,36 @@ macro_rules! handle_soft_error {
             Message::Warning($crate::fl!("error-with-message", err = format!("{err:#}")))
         }
     };
+}
+
+/// Connects to a paired device, resolving to the device settings screen on success.
+fn connect_to_device(
+    session: Arc<OpenSCQ30Session>,
+    paired_device: PairedDevice,
+    canceled: Arc<Semaphore>,
+) -> cosmic::app::Task<Message> {
+    Task::future(async move {
+        let connect_result = select! {
+            connect_result = session.connect(paired_device.mac_address) => connect_result,
+            _ = canceled.acquire() => return Ok(Message::None.into()),
+        };
+
+        match connect_result {
+            Ok(device) => {
+                Ok(Message::ActivateConnectToDeviceScreen(DebugOpenSCQ30Device(device)).into())
+            }
+            Err(err) => {
+                let err = anyhow::Error::from(err);
+                tracing::warn!("soft_error: {err:?}");
+                Ok(Message::ConnectToDeviceFailed(fl!(
+                    "error-with-message",
+                    err = format!("{err:#}")
+                ))
+                .into())
+            }
+        }
+    })
+    .map(coalesce_result)
 }
 
 impl Application for AppModel {
@@ -174,7 +189,41 @@ impl Application for AppModel {
             ))
             .expect("database is required to run"),
         );
-        let (model, task) = DeviceSelectionModel::new(session.clone());
+        let (add_device_model, add_device_task) = AddDeviceModel::new(session.clone());
+
+        // Only the Soundcore R50i NC (A3959) is supported. Auto-select it and connect on launch
+        // if it's already paired; otherwise show the pairing screen.
+        let paired_devices =
+            futures::executor::block_on(session.paired_devices()).unwrap_or_else(|err| {
+                tracing::warn!("failed to load paired devices: {err:?}");
+                Vec::new()
+            });
+        let paired_device = paired_devices
+            .iter()
+            .find(|device| device.model == DeviceModel::SoundcoreA3959)
+            .or_else(|| paired_devices.first())
+            .copied();
+
+        let (screen, startup_task) = match paired_device {
+            Some(device) => {
+                let canceled = Arc::new(Semaphore::new(0));
+                let connect_task = connect_to_device(session.clone(), device, canceled.clone());
+                (
+                    Screen::Connecting {
+                        canceled,
+                        name: device.model.translate(),
+                    },
+                    connect_task,
+                )
+            }
+            None => (
+                Screen::AddDevice(add_device_model),
+                add_device_task
+                    .map(Message::AddDeviceScreen)
+                    .map(Into::into),
+            ),
+        };
+
         let (available_languages, available_language_names) =
             iter::once((None, Cow::Owned(fl!("default"))))
                 .chain(
@@ -184,8 +233,7 @@ impl Application for AppModel {
                 .collect::<(Vec<_>, Vec<_>)>();
         let mut app = Self {
             core,
-            screen: Screen::DeviceSelection(model),
-            dialog_page: None,
+            screen,
             session,
             warnings: VecDeque::with_capacity(5),
             config: flags.config,
@@ -197,13 +245,7 @@ impl Application for AppModel {
             key_binds: key_binds(),
         };
         let command = app.update_title();
-        (
-            app,
-            cosmic::Task::batch([
-                command,
-                task.map(Message::DeviceSelectionScreen).map(Into::into),
-            ]),
-        )
+        (app, cosmic::Task::batch([command, startup_task]))
     }
 
     fn subscription(&self) -> cosmic::iced::Subscription<Self::Message> {
@@ -241,17 +283,6 @@ impl Application for AppModel {
         }
     }
 
-    fn header_start(&self) -> Vec<cosmic::Element<'_, Self::Message>> {
-        match self.screen {
-            Screen::DeviceSelection(_) => Vec::new(),
-            _ => vec![
-                widget::button::icon(widget::icon::from_name("go-previous-symbolic"))
-                    .on_press(Message::BackToDeviceSelection)
-                    .into(),
-            ],
-        }
-    }
-
     fn header_end(&self) -> Vec<cosmic::Element<'_, Self::Message>> {
         vec![
             widget::button::icon(widget::icon::from_name("preferences-system-symbolic"))
@@ -271,11 +302,6 @@ impl Application for AppModel {
                 }),
             )
             .push(match &self.screen {
-                Screen::DeviceSelection(device_selection_model) => cosmic::Element::from(
-                    device_selection_model
-                        .view()
-                        .map(Message::DeviceSelectionScreen),
-                ),
                 Screen::AddDevice(add_device_model) => {
                     add_device_model.view().map(Message::AddDeviceScreen)
                 }
@@ -288,32 +314,13 @@ impl Application for AppModel {
     }
 
     fn dialog(&self) -> Option<cosmic::Element<'_, Self::Message>> {
-        let dialog = match &self.screen {
-            Screen::DeviceSelection(_device_selection_model) => None,
-            Screen::AddDevice(_add_device_model) => None,
+        match &self.screen {
+            Screen::AddDevice(_) => None,
             Screen::Connecting { .. } => None,
             Screen::DeviceSettings(device_settings_model) => device_settings_model
                 .dialog()
                 .map(|e| e.map(Message::DeviceSettingsScreen)),
-        };
-        if dialog.is_some() {
-            return dialog;
         }
-        let dialog_page = self.dialog_page.as_ref()?;
-        Some(match dialog_page {
-            DialogPage::RemoveDevice(device) => widget::dialog()
-                .title(fl!("prompt-remove-device-title"))
-                .body(fl!("prompt-remove-device", name = device.model.translate()))
-                .icon(widget::icon::from_name("dialog-warning-symbolic"))
-                .primary_action(
-                    widget::button::destructive(fl!("remove"))
-                        .on_press(Message::RemovePairedDevice(device.mac_address)),
-                )
-                .secondary_action(
-                    widget::button::text(fl!("cancel")).on_press(Message::CloseDialog),
-                )
-                .into(),
-        })
     }
 
     fn context_drawer(&self) -> Option<ContextDrawer<'_, Self::Message>> {
@@ -360,8 +367,7 @@ impl Application for AppModel {
             }
         } else {
             match &self.screen {
-                Screen::DeviceSelection(_device_selection_model) => None,
-                Screen::AddDevice(_add_device_model) => None,
+                Screen::AddDevice(_) => None,
                 Screen::Connecting { .. } => None,
                 Screen::DeviceSettings(device_settings_model) => device_settings_model
                     .context_drawer()
@@ -404,9 +410,6 @@ impl Application for AppModel {
                 match action {
                     Some(ActionKind::Global(action)) => match action {
                         KeyBindAction::Settings => self.toggle_settings(),
-                        KeyBindAction::CloseDialog => {
-                            self.dialog_page = None;
-                        }
                     },
                     Some(ActionKind::AddDevice(action)) => {
                         return self.handle_add_device_action(action);
@@ -417,55 +420,6 @@ impl Application for AppModel {
                     None => (),
                 }
             }
-            Message::DeviceSelectionScreen(message) => {
-                if let Screen::DeviceSelection(ref mut screen) = self.screen {
-                    match screen.update(message) {
-                        device_selection::Action::ConnectToDevice(paired_device) => {
-                            let session = self.session.clone();
-                            let canceled = Arc::new(Semaphore::new(0));
-                            self.screen = Screen::Connecting {
-                                canceled: canceled.clone(),
-                                name: paired_device.model.translate(),
-                            };
-                            return Task::future(async move {
-                                let connect_result = select! {
-                                    connect_result = session.connect(paired_device.mac_address) => connect_result,
-                                    _ = canceled.acquire() => return Ok(Message::None.into()),
-                                };
-
-                                match connect_result {
-                                    Ok(device) => {
-                                        Ok(Message::ActivateConnectToDeviceScreen(DebugOpenSCQ30Device(
-                                            device,
-                                        ))
-                                        .into())
-                                    },
-                                    Err(err) => {
-                                        let err = anyhow::Error::from(err);
-                                        tracing::warn!("soft_error: {err:?}");
-                                        Ok(Message::ConnectToDeviceFailed(fl!(
-                                                "error-with-message",
-                                                err = format!("{err:#}")
-                                        )).into())
-                                    },
-                                }
-                            })
-                            .map(coalesce_result);
-                        }
-                        device_selection::Action::RemoveDevice(device) => {
-                            self.dialog_page = Some(DialogPage::RemoveDevice(device));
-                        }
-                        device_selection::Action::AddDevice => {
-                            self.screen =
-                                Screen::AddDevice(AddDeviceModel::new(self.session.clone()));
-                        }
-                        device_selection::Action::None => (),
-                        device_selection::Action::Warning(message) => {
-                            return Task::done(Message::Warning(message).into());
-                        }
-                    }
-                }
-            }
             Message::AddDeviceScreen(message) => {
                 if let Screen::AddDevice(ref mut screen) = self.screen {
                     match screen.update(message) {
@@ -474,15 +428,9 @@ impl Application for AppModel {
                             return task.map(Message::AddDeviceScreen).map(Into::into);
                         }
                         add_device::Action::AddDevice(paired_device) => {
-                            let database = self.session.clone();
-                            return Task::future(async move {
-                                database
-                                    .pair(paired_device)
-                                    .await
-                                    .map_err(handle_soft_error!())?;
-                                Ok(Message::ActivateDeviceSelectionScreen.into())
-                            })
-                            .map(coalesce_result);
+                            return self.handle_add_device_action(add_device::Action::AddDevice(
+                                paired_device,
+                            ));
                         }
                         add_device::Action::FocusTextInput(id) => {
                             return widget::text_input::focus(id);
@@ -490,10 +438,14 @@ impl Application for AppModel {
                     }
                 }
             }
-            Message::ActivateDeviceSelectionScreen => {
-                let (model, task) = DeviceSelectionModel::new(self.session.clone());
-                self.screen = Screen::DeviceSelection(model);
-                return task.map(Message::DeviceSelectionScreen).map(Into::into);
+            Message::ActivateConnectToDeviceScreen(device) => {
+                let (model, task) = device_settings::DeviceSettingsModel::new(
+                    device,
+                    self.session.quick_preset_handler(),
+                    self.config_dir.to_owned(),
+                );
+                self.screen = Screen::DeviceSettings(model);
+                return task.map(Message::DeviceSettingsScreen).map(Into::into);
             }
             Message::DeviceSettingsScreen(message) => {
                 let maybe_action = if let Screen::DeviceSettings(ref mut screen) = self.screen {
@@ -505,53 +457,30 @@ impl Application for AppModel {
                     return self.handle_device_settings_action(action);
                 }
             }
-            Message::CloseDialog => self.dialog_page = None,
-            Message::RemovePairedDevice(mac_address) => {
-                let database = self.session.clone();
-                return Task::future(async move {
-                    database
-                        .unpair(mac_address)
-                        .await
-                        .map_err(handle_soft_error!())?;
-                    Ok(Message::CloseDialogAndRefreshPairedDevices.into())
-                })
-                .map(coalesce_result);
-            }
-            Message::CloseDialogAndRefreshPairedDevices => {
-                if let Screen::DeviceSelection(ref mut _screen) = self.screen {
-                    self.dialog_page = None;
-                    return device_selection::DeviceSelectionModel::refresh_paired_devices(
-                        self.session.clone(),
-                    )
-                    .map(Message::from)
-                    .map(Into::into);
-                }
-            }
-            Message::BackToDeviceSelection => {
-                let (model, task) = DeviceSelectionModel::new(self.session.clone());
-                self.screen = Screen::DeviceSelection(model);
-                return task.map(Message::DeviceSelectionScreen).map(Into::into);
+            Message::ConnectToDevice(paired_device) => {
+                let canceled = Arc::new(Semaphore::new(0));
+                self.screen = Screen::Connecting {
+                    canceled: canceled.clone(),
+                    name: paired_device.model.translate(),
+                };
+                return connect_to_device(self.session.clone(), paired_device, canceled);
             }
             Message::CancelConnectToDevice => {
                 if let Screen::Connecting { canceled, .. } = &self.screen {
                     canceled.close();
-                    return Task::done(Message::ActivateDeviceSelectionScreen.into());
+                    return Task::done(Message::ShowAddDevice.into());
                 }
             }
             Message::ConnectToDeviceFailed(message) => {
                 return Task::batch([
-                    Task::done(Message::ActivateDeviceSelectionScreen.into()),
+                    Task::done(Message::ShowAddDevice.into()),
                     Task::done(Message::Warning(message).into()),
                 ]);
             }
-            Message::ActivateConnectToDeviceScreen(device) => {
-                let (model, task) = device_settings::DeviceSettingsModel::new(
-                    device,
-                    self.session.quick_preset_handler(),
-                    self.config_dir.to_owned(),
-                );
-                self.screen = Screen::DeviceSettings(model);
-                return task.map(Message::DeviceSettingsScreen).map(Into::into);
+            Message::ShowAddDevice => {
+                let (model, task) = AddDeviceModel::new(self.session.clone());
+                self.screen = Screen::AddDevice(model);
+                return task.map(Message::AddDeviceScreen).map(Into::into);
             }
             Message::Warning(message) => {
                 // cap max number of warnings, since it's bad UX to have to close a million of them if something goes wrong and spams them
@@ -636,7 +565,7 @@ impl AppModel {
                         .pair(paired_device)
                         .await
                         .map_err(handle_soft_error!())?;
-                    Ok(Message::ActivateDeviceSelectionScreen.into())
+                    Ok(Message::ConnectToDevice(paired_device).into())
                 })
                 .map(coalesce_result)
             }
@@ -657,9 +586,7 @@ impl AppModel {
                 Task::done(Message::Warning(message).into())
             }
             device_settings::Action::FocusTextInput(id) => widget::text_input::focus(id),
-            device_settings::Action::Disconnect => {
-                Task::done(Message::ActivateDeviceSelectionScreen.into())
-            }
+            device_settings::Action::Disconnect => Task::done(Message::ShowAddDevice.into()),
         }
     }
 
@@ -684,13 +611,6 @@ fn key_binds() -> HashMap<KeyBind, KeyBindAction> {
             key: keyboard::Key::Character(",".into()),
         },
         KeyBindAction::Settings,
-    );
-    key_binds.insert(
-        KeyBind {
-            modifiers: Vec::new(),
-            key: keyboard::Key::Named(keyboard::key::Named::Escape),
-        },
-        KeyBindAction::CloseDialog,
     );
 
     key_binds

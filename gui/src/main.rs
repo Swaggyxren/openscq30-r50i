@@ -7,7 +7,6 @@ use tracing_subscriber::EnvFilter;
 mod add_device;
 mod app;
 mod config;
-mod device_selection;
 mod device_settings;
 pub mod equalizer_line;
 mod i18n;

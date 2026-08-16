@@ -9,7 +9,6 @@ use openscq30_i18n::Translate;
 use openscq30_lib::{
     DeviceModel, OpenSCQ30Session, connection::ConnectionDescriptor, storage::PairedDevice,
 };
-use strum::IntoEnumIterator;
 use tracing::error;
 
 use crate::fl;
@@ -21,15 +20,10 @@ pub struct AddDeviceModel {
 }
 
 enum Stage {
-    ModelSelection(ModelSelectionModel),
     SelectDevice(SelectDeviceModel),
     Error(String),
 }
 
-struct ModelSelectionModel {
-    search_query: String,
-    search_widget_id: widget::Id,
-}
 struct SelectDeviceModel {
     search_query: String,
     search_widget_id: widget::Id,
@@ -41,7 +35,6 @@ struct SelectDeviceModel {
 #[derive(Clone, Debug)]
 #[allow(clippy::enum_variant_names)]
 pub enum Message {
-    SetDeviceModelSearchQuery(String),
     SelectModel(DeviceModel, bool),
     SelectDevice(usize, bool),
     SetDeviceList(Vec<ConnectionDescriptor>, bool),
@@ -57,56 +50,51 @@ pub enum Action {
 }
 
 impl AddDeviceModel {
-    pub fn new(session: Arc<OpenSCQ30Session>) -> Self {
-        Self {
-            session,
-            stage: Stage::ModelSelection(ModelSelectionModel {
+    pub fn new(session: Arc<OpenSCQ30Session>) -> (Self, Task<Message>) {
+        let device_model = DeviceModel::SoundcoreA3959;
+        let model = Self {
+            session: session.clone(),
+            stage: Stage::SelectDevice(SelectDeviceModel {
                 search_query: String::new(),
                 search_widget_id: widget::Id::unique(),
+                devices: None,
+                device_model,
+                is_demo_mode: false,
             }),
             key_binds: key_binds(),
-        }
+        };
+        let task = Self::list_devices(session, device_model, false);
+        (model, task)
+    }
+
+    fn list_devices(
+        session: Arc<OpenSCQ30Session>,
+        device_model: DeviceModel,
+        is_demo_mode: bool,
+    ) -> Task<Message> {
+        Task::perform(
+            async move {
+                if is_demo_mode {
+                    session.list_demo_devices(device_model).await
+                } else {
+                    session.list_devices(device_model).await
+                }
+            },
+            move |result| match result {
+                Ok(devices) => Message::SetDeviceList(devices, is_demo_mode),
+                Err(err) => {
+                    error!("{} fetching devices: {err:?}", device_model);
+                    Message::SetErrorMessage(format!("{err}"))
+                }
+            },
+        )
     }
 
     pub fn view(&self) -> Element<'_, Message> {
         match &self.stage {
-            Stage::ModelSelection(ui_model) => Self::device_model_selection(ui_model),
             Stage::SelectDevice(ui_model) => Self::select_device(ui_model),
             Stage::Error(message) => Self::error(message),
         }
-    }
-
-    fn device_model_selection(ui_model: &ModelSelectionModel) -> Element<'_, Message> {
-        widget::column![
-            widget::column![
-                widget::text::title2(fl!("select-device-model")),
-                widget::search_input(fl!("device-model"), &ui_model.search_query)
-                    .id(ui_model.search_widget_id.clone())
-                    .on_input(Message::SetDeviceModelSearchQuery),
-            ]
-            .spacing(8)
-            // padding should not apply to the list of devices, since those are buttons with their own padding
-            .padding([0, 10]),
-            widget::scrollable(widget::column(
-                DeviceModel::iter()
-                    .filter(|device_model| {
-                        device_model
-                            .translate()
-                            .to_lowercase()
-                            .contains(&ui_model.search_query.to_lowercase())
-                    })
-                    .map(|device_model| {
-                        // custom button with ButtonClass::Text because button::text ignores width(Length::Fill)
-                        widget::button::custom(widget::text(device_model.translate()))
-                            .class(widget::button::ButtonClass::Text)
-                            .width(Length::Fill)
-                            .on_press(Message::SelectModel(device_model, false))
-                            .into()
-                    }),
-            ),)
-        ]
-        .spacing(8)
-        .into()
     }
 
     fn select_device(ui_model: &SelectDeviceModel) -> Element<'_, Message> {
@@ -219,43 +207,14 @@ impl AddDeviceModel {
     #[must_use]
     pub fn update(&mut self, message: Message) -> Action {
         match message {
-            Message::SetDeviceModelSearchQuery(query) => {
-                if let Stage::ModelSelection(ref mut ui_model) = self.stage {
-                    ui_model.search_query = query;
-                }
-            }
             Message::SelectModel(device_model, is_demo_mode) => {
                 if let Stage::SelectDevice(ref mut ui_model) = self.stage {
-                    // if we're already on the select device page, don't clear the search and such
                     ui_model.device_model = device_model;
                     ui_model.is_demo_mode = is_demo_mode;
                     ui_model.devices = None;
-                } else {
-                    self.stage = Stage::SelectDevice(SelectDeviceModel {
-                        search_query: String::new(),
-                        search_widget_id: widget::Id::unique(),
-                        devices: None,
-                        device_model,
-                        is_demo_mode,
-                    });
                 }
                 let session = self.session.clone();
-                return Action::Task(Task::perform(
-                    async move {
-                        if is_demo_mode {
-                            session.list_demo_devices(device_model).await
-                        } else {
-                            session.list_devices(device_model).await
-                        }
-                    },
-                    move |result| match result {
-                        Ok(devices) => Message::SetDeviceList(devices, is_demo_mode),
-                        Err(err) => {
-                            error!("{} fetching devices: {err:?}", device_model);
-                            Message::SetErrorMessage(format!("{err}"))
-                        }
-                    },
-                ));
+                return Action::Task(Self::list_devices(session, device_model, is_demo_mode));
             }
             Message::SetDeviceList(devices, is_demo_mode) => {
                 if let Stage::SelectDevice(ref mut ui_model) = self.stage {
@@ -308,9 +267,6 @@ impl AddDeviceModel {
     fn handle_key_bind_action(&mut self, action: KeyBindAction) -> Action {
         match action {
             KeyBindAction::Find => match &self.stage {
-                Stage::ModelSelection(model_selection) => {
-                    Action::FocusTextInput(model_selection.search_widget_id.clone())
-                }
                 Stage::SelectDevice(select_device) => {
                     Action::FocusTextInput(select_device.search_widget_id.clone())
                 }
