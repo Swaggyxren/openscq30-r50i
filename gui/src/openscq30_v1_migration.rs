@@ -94,7 +94,7 @@ mod tests {
         session
             .pair(PairedDevice {
                 mac_address: MacAddr6::nil(),
-                model: DeviceModel::SoundcoreA3027,
+                model: DeviceModel::SoundcoreA3959,
                 is_demo: true,
             })
             .await

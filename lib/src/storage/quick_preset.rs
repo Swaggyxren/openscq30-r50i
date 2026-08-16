@@ -309,13 +309,13 @@ mod tests {
         let db = OpenSCQ30Database::new_in_memory().await.unwrap();
         let test_data = test_data();
         for preset in &test_data {
-            db.upsert_quick_preset(DeviceModel::SoundcoreA3004, preset.clone())
+            db.upsert_quick_preset(DeviceModel::SoundcoreA3959, preset.clone())
                 .await
                 .unwrap();
         }
         // insert one for another device to ensure it is excluded from the results
         db.upsert_quick_preset(
-            DeviceModel::SoundcoreA3028,
+            DeviceModel::SoundcoreDevelopment,
             QuickPreset {
                 name: "Preset 1".into(),
                 fields: vec![QuickPresetField {
@@ -329,7 +329,7 @@ mod tests {
         .unwrap();
 
         let mut fetched_presets = db
-            .fetch_all_quick_presets(DeviceModel::SoundcoreA3004)
+            .fetch_all_quick_presets(DeviceModel::SoundcoreA3959)
             .await
             .unwrap();
 
@@ -343,13 +343,13 @@ mod tests {
         let db = OpenSCQ30Database::new_in_memory().await.unwrap();
         let test_data = test_data();
         for preset in &test_data {
-            db.upsert_quick_preset(DeviceModel::SoundcoreA3004, preset.clone())
+            db.upsert_quick_preset(DeviceModel::SoundcoreA3959, preset.clone())
                 .await
                 .unwrap();
         }
         // insert one for another device to ensure it is excluded from the results
         db.upsert_quick_preset(
-            DeviceModel::SoundcoreA3028,
+            DeviceModel::SoundcoreDevelopment,
             QuickPreset {
                 name: "Preset 1".into(),
                 fields: vec![QuickPresetField {
@@ -363,7 +363,7 @@ mod tests {
         .unwrap();
 
         let fetched_preset = db
-            .fetch_quick_preset(DeviceModel::SoundcoreA3004, "Preset 1".into())
+            .fetch_quick_preset(DeviceModel::SoundcoreA3959, "Preset 1".into())
             .await
             .unwrap();
         assert_eq!(test_data[0], fetched_preset);
@@ -374,13 +374,13 @@ mod tests {
         let db = OpenSCQ30Database::new_in_memory().await.unwrap();
         let test_data = test_data();
         for preset in &test_data {
-            db.upsert_quick_preset(DeviceModel::SoundcoreA3004, preset.clone())
+            db.upsert_quick_preset(DeviceModel::SoundcoreA3959, preset.clone())
                 .await
                 .unwrap();
         }
         // insert one for another device to ensure it is excluded from the results
         db.upsert_quick_preset(
-            DeviceModel::SoundcoreA3028,
+            DeviceModel::SoundcoreDevelopment,
             QuickPreset {
                 name: "Preset 1".into(),
                 fields: vec![QuickPresetField {
@@ -393,11 +393,11 @@ mod tests {
         .await
         .unwrap();
 
-        db.delete_quick_preset(DeviceModel::SoundcoreA3004, "Preset 1".into())
+        db.delete_quick_preset(DeviceModel::SoundcoreA3959, "Preset 1".into())
             .await
             .unwrap();
         let fetch_one_err = db
-            .fetch_quick_preset(DeviceModel::SoundcoreA3004, "Preset 1".into())
+            .fetch_quick_preset(DeviceModel::SoundcoreA3959, "Preset 1".into())
             .await
             .unwrap_err();
         assert_matches!(
@@ -407,7 +407,7 @@ mod tests {
         );
 
         let fetched_presets = db
-            .fetch_all_quick_presets(DeviceModel::SoundcoreA3004)
+            .fetch_all_quick_presets(DeviceModel::SoundcoreA3959)
             .await
             .unwrap();
         assert!(
@@ -421,7 +421,7 @@ mod tests {
             "the preset should not show up when fetching all presets",
         );
 
-        db.fetch_quick_preset(DeviceModel::SoundcoreA3028, "Preset 1".into())
+        db.fetch_quick_preset(DeviceModel::SoundcoreDevelopment, "Preset 1".into())
             .await
             .expect("the other device's preset with the same name should not have been deleted");
     }
@@ -430,7 +430,7 @@ mod tests {
     async fn test_upsert() {
         let db = OpenSCQ30Database::new_in_memory().await.unwrap();
         db.upsert_quick_preset(
-            DeviceModel::SoundcoreA3004,
+            DeviceModel::SoundcoreA3959,
             QuickPreset {
                 name: "Preset 1".into(),
                 fields: vec![
@@ -456,7 +456,7 @@ mod tests {
         .unwrap();
 
         db.upsert_quick_preset(
-            DeviceModel::SoundcoreA3004,
+            DeviceModel::SoundcoreA3959,
             QuickPreset {
                 name: "Preset 1".into(),
                 fields: vec![
@@ -487,7 +487,7 @@ mod tests {
         .unwrap();
 
         let preset = db
-            .fetch_quick_preset(DeviceModel::SoundcoreA3004, "Preset 1".into())
+            .fetch_quick_preset(DeviceModel::SoundcoreA3959, "Preset 1".into())
             .await
             .expect("the other device's preset with the same name should not have been deleted");
         assert_eq!(
@@ -520,17 +520,17 @@ mod tests {
         let db = OpenSCQ30Database::new_in_memory().await.unwrap();
         let test_data = test_data();
         for preset in &test_data {
-            db.upsert_quick_preset(DeviceModel::SoundcoreA3004, preset.clone())
+            db.upsert_quick_preset(DeviceModel::SoundcoreA3959, preset.clone())
                 .await
                 .unwrap();
         }
         // insert one for another device to ensure it is not changed
-        db.upsert_quick_preset(DeviceModel::SoundcoreA3028, test_data[0].clone())
+        db.upsert_quick_preset(DeviceModel::SoundcoreDevelopment, test_data[0].clone())
             .await
             .unwrap();
 
         db.toggle_quick_preset_field(
-            DeviceModel::SoundcoreA3004,
+            DeviceModel::SoundcoreA3959,
             "Preset 1".into(),
             SettingId::AmbientSoundMode,
             false,
@@ -539,7 +539,7 @@ mod tests {
         .unwrap();
 
         let fetched_preset = db
-            .fetch_quick_preset(DeviceModel::SoundcoreA3004, "Preset 1".into())
+            .fetch_quick_preset(DeviceModel::SoundcoreA3959, "Preset 1".into())
             .await
             .unwrap();
         assert_eq!(
@@ -563,7 +563,7 @@ mod tests {
         );
 
         let other_device_fetched_preset = db
-            .fetch_quick_preset(DeviceModel::SoundcoreA3028, "Preset 1".into())
+            .fetch_quick_preset(DeviceModel::SoundcoreDevelopment, "Preset 1".into())
             .await
             .unwrap();
         assert_eq!(
@@ -577,14 +577,14 @@ mod tests {
         let db = OpenSCQ30Database::new_in_memory().await.unwrap();
         let test_data = test_data();
         for preset in &test_data {
-            db.upsert_quick_preset(DeviceModel::SoundcoreA3004, preset.clone())
+            db.upsert_quick_preset(DeviceModel::SoundcoreA3959, preset.clone())
                 .await
                 .unwrap();
         }
 
         let err = db
             .toggle_quick_preset_field(
-                DeviceModel::SoundcoreA3004,
+                DeviceModel::SoundcoreA3959,
                 "Preset Does Not Exist".into(),
                 SettingId::AmbientSoundMode,
                 false,
@@ -600,14 +600,14 @@ mod tests {
         let db = OpenSCQ30Database::new_in_memory().await.unwrap();
         let test_data = test_data();
         for preset in &test_data {
-            db.upsert_quick_preset(DeviceModel::SoundcoreA3004, preset.clone())
+            db.upsert_quick_preset(DeviceModel::SoundcoreA3959, preset.clone())
                 .await
                 .unwrap();
         }
 
         let err = db
             .toggle_quick_preset_field(
-                DeviceModel::SoundcoreA3004,
+                DeviceModel::SoundcoreA3959,
                 "Preset 1".into(),
                 SettingId::FirmwareVersionLeft,
                 false,

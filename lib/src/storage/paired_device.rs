@@ -130,17 +130,17 @@ mod tests {
         let paired_devices = [
             PairedDevice {
                 mac_address: MacAddr6::new(0, 0, 0, 0, 0, 1),
-                model: DeviceModel::SoundcoreA3028,
+                model: DeviceModel::SoundcoreA3959,
                 is_demo: false,
             },
             PairedDevice {
                 mac_address: MacAddr6::new(0, 0, 0, 0, 0, 2),
-                model: DeviceModel::SoundcoreA3033,
+                model: DeviceModel::SoundcoreDevelopment,
                 is_demo: false,
             },
             PairedDevice {
                 mac_address: MacAddr6::new(0, 0, 0, 0, 0, 3),
-                model: DeviceModel::SoundcoreA3029,
+                model: DeviceModel::SoundcoreDevelopment,
                 is_demo: false,
             },
         ];
@@ -161,17 +161,17 @@ mod tests {
         let paired_devices = [
             PairedDevice {
                 mac_address: MacAddr6::new(0, 0, 0, 0, 0, 1),
-                model: DeviceModel::SoundcoreA3028,
+                model: DeviceModel::SoundcoreA3959,
                 is_demo: false,
             },
             PairedDevice {
                 mac_address: MacAddr6::new(0, 0, 0, 0, 0, 2),
-                model: DeviceModel::SoundcoreA3033,
+                model: DeviceModel::SoundcoreDevelopment,
                 is_demo: false,
             },
             PairedDevice {
                 mac_address: MacAddr6::new(0, 0, 0, 0, 0, 3),
-                model: DeviceModel::SoundcoreA3029,
+                model: DeviceModel::SoundcoreDevelopment,
                 is_demo: false,
             },
         ];
@@ -191,12 +191,12 @@ mod tests {
         let paired_devices = [
             PairedDevice {
                 mac_address: MacAddr6::new(0, 0, 0, 0, 0, 1),
-                model: DeviceModel::SoundcoreA3028,
+                model: DeviceModel::SoundcoreA3959,
                 is_demo: false,
             },
             PairedDevice {
                 mac_address: MacAddr6::new(0, 0, 0, 0, 0, 2),
-                model: DeviceModel::SoundcoreA3033,
+                model: DeviceModel::SoundcoreDevelopment,
                 is_demo: false,
             },
         ];
@@ -204,7 +204,7 @@ mod tests {
         // Insert one to be overwritten
         db.insert_paired_device(PairedDevice {
             mac_address: MacAddr6::new(0, 0, 0, 0, 0, 1),
-            model: DeviceModel::SoundcoreA3004,
+            model: DeviceModel::SoundcoreDevelopment,
             is_demo: true,
         })
         .await
@@ -226,12 +226,12 @@ mod tests {
         let paired_devices = [
             PairedDevice {
                 mac_address: MacAddr6::new(0, 0, 0, 0, 0, 1),
-                model: DeviceModel::SoundcoreA3028,
+                model: DeviceModel::SoundcoreA3959,
                 is_demo: false,
             },
             PairedDevice {
                 mac_address: MacAddr6::new(0, 0, 0, 0, 0, 2),
-                model: DeviceModel::SoundcoreA3033,
+                model: DeviceModel::SoundcoreDevelopment,
                 is_demo: false,
             },
         ];
