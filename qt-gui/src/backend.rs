@@ -68,6 +68,37 @@ pub struct Backend {
     busy: qt_property!(bool; NOTIFY busyChanged),
     busyChanged: qt_signal!(),
 
+    // Quick toggles.
+    gamingMode: qt_property!(bool; NOTIFY gamingModeChanged),
+    gamingModeChanged: qt_signal!(),
+    dualConnections: qt_property!(bool; NOTIFY dualConnectionsChanged),
+    dualConnectionsChanged: qt_signal!(),
+    touchTone: qt_property!(bool; NOTIFY touchToneChanged),
+    touchToneChanged: qt_signal!(),
+    lowBatteryPrompt: qt_property!(bool; NOTIFY lowBatteryPromptChanged),
+    lowBatteryPromptChanged: qt_signal!(),
+    windNoiseSuppression: qt_property!(bool; NOTIFY windNoiseSuppressionChanged),
+    windNoiseSuppressionChanged: qt_signal!(),
+
+    // Auto power off (select).
+    autoPowerOff: qt_property!(String; NOTIFY autoPowerOffChanged),
+    autoPowerOffChanged: qt_signal!(),
+
+    // Equalizer.
+    eqBands: qt_property!(QVariantList; NOTIFY eqBandsChanged),
+    eqBandsChanged: qt_signal!(),
+    eqMin: qt_property!(i32; NOTIFY eqBandsChanged),
+    eqMax: qt_property!(i32; NOTIFY eqBandsChanged),
+    eqBandHz: qt_property!(QVariantList; NOTIFY eqBandsChanged),
+    eqPreset: qt_property!(String; NOTIFY eqPresetChanged),
+    eqPresetChanged: qt_signal!(),
+    eqPresets: qt_property!(QVariantList; NOTIFY eqPresetChanged),
+
+    // Device information.
+    serialNumber: qt_property!(String; NOTIFY infoChanged),
+    firmwareVersion: qt_property!(String; NOTIFY infoChanged),
+    infoChanged: qt_signal!(),
+
     // QML-invokable methods.
     startup: qt_method!(fn(&mut self)),
     listDevices: qt_method!(fn(&mut self)),
@@ -122,6 +153,29 @@ impl Backend {
             settingsChanged: Default::default(),
             busy: false,
             busyChanged: Default::default(),
+            gamingMode: false,
+            gamingModeChanged: Default::default(),
+            dualConnections: false,
+            dualConnectionsChanged: Default::default(),
+            touchTone: false,
+            touchToneChanged: Default::default(),
+            lowBatteryPrompt: false,
+            lowBatteryPromptChanged: Default::default(),
+            windNoiseSuppression: false,
+            windNoiseSuppressionChanged: Default::default(),
+            autoPowerOff: String::new(),
+            autoPowerOffChanged: Default::default(),
+            eqBands: QVariantList::default(),
+            eqBandsChanged: Default::default(),
+            eqMin: 0,
+            eqMax: 0,
+            eqBandHz: QVariantList::default(),
+            eqPreset: String::new(),
+            eqPresetChanged: Default::default(),
+            eqPresets: QVariantList::default(),
+            serialNumber: String::new(),
+            firmwareVersion: String::new(),
+            infoChanged: Default::default(),
             startup: Default::default(),
             listDevices: Default::default(),
             pairAndConnect: Default::default(),
@@ -237,6 +291,60 @@ impl Backend {
         self.ancMode =
             current_select_value(device.as_ref(), SettingId::AmbientSoundMode).unwrap_or_default();
         self.ancModeChanged();
+
+        // Quick toggles.
+        self.gamingMode = toggle_value(device.as_ref(), SettingId::GamingMode);
+        self.gamingModeChanged();
+        self.dualConnections = toggle_value(device.as_ref(), SettingId::DualConnections);
+        self.dualConnectionsChanged();
+        self.touchTone = toggle_value(device.as_ref(), SettingId::TouchTone);
+        self.touchToneChanged();
+        self.lowBatteryPrompt = toggle_value(device.as_ref(), SettingId::LowBatteryPrompt);
+        self.lowBatteryPromptChanged();
+        self.windNoiseSuppression = toggle_value(device.as_ref(), SettingId::WindNoiseSuppression);
+        self.windNoiseSuppressionChanged();
+
+        // Auto power off.
+        self.autoPowerOff =
+            current_select_value(device.as_ref(), SettingId::AutoPowerOff).unwrap_or_default();
+        self.autoPowerOffChanged();
+
+        // Equalizer.
+        match device.setting(&SettingId::VolumeAdjustments) {
+            Some(Setting::Equalizer { setting, value, .. }) => {
+                let mut bands = QVariantList::default();
+                for band in &value {
+                    bands.push(QVariant::from(*band as i32));
+                }
+                let mut band_hz = QVariantList::default();
+                for hz in setting.band_hz.iter() {
+                    band_hz.push(QVariant::from(*hz as i32));
+                }
+                self.eqBands = bands;
+                self.eqBandHz = band_hz;
+                self.eqMin = setting.min as i32;
+                self.eqMax = setting.max as i32;
+                self.eqBandsChanged();
+            }
+            _ => {
+                self.eqBands = QVariantList::default();
+                self.eqBandHz = QVariantList::default();
+                self.eqMin = 0;
+                self.eqMax = 0;
+                self.eqBandsChanged();
+            }
+        }
+        self.eqPreset = current_select_value(device.as_ref(), SettingId::PresetEqualizerProfile)
+            .unwrap_or_default();
+        self.eqPresets = select_options(device.as_ref(), SettingId::PresetEqualizerProfile);
+        self.eqPresetChanged();
+
+        // Device information.
+        self.serialNumber =
+            information_value(device.as_ref(), SettingId::SerialNumber).unwrap_or_default();
+        self.firmwareVersion =
+            information_value(device.as_ref(), SettingId::FirmwareVersion).unwrap_or_default();
+        self.infoChanged();
 
         self.rebuild_categories(device.as_ref());
         self.rebuild_settings(device.as_ref());
@@ -631,6 +739,34 @@ fn current_select_value(device: &dyn OpenSCQ30Device, setting_id: SettingId) -> 
         }
         _ => None,
     }
+}
+
+fn toggle_value(device: &dyn OpenSCQ30Device, setting_id: SettingId) -> bool {
+    matches!(
+        device.setting(&setting_id),
+        Some(Setting::Toggle { value: true })
+    )
+}
+
+/// Returns the raw option names for a select-style setting as a QML list.
+fn select_options(device: &dyn OpenSCQ30Device, setting_id: SettingId) -> QVariantList {
+    let select = match device.setting(&setting_id) {
+        Some(Setting::Select { setting, .. })
+        | Some(Setting::OptionalSelect { setting, .. })
+        | Some(Setting::ModifiableSelect { setting, .. })
+        | Some(Setting::PresetEqualizerProfileSelect {
+            select: setting, ..
+        }) => Some(setting),
+        _ => None,
+    };
+    let Some(select) = select else {
+        return QVariantList::default();
+    };
+    select
+        .options
+        .iter()
+        .map(|option| QVariant::from(QString::from(option.as_ref())))
+        .collect()
 }
 
 fn select_value(

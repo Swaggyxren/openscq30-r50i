@@ -31,20 +31,7 @@ KC.ApplicationWindow {
         }
     }
 
-    // ---- helper functions for select settings ----
-    function selectIndex(s) {
-        if (s.nullable)
-            return s.value === "" ? 0 : s.options.indexOf(s.value) + 1
-        return s.options.indexOf(s.value)
-    }
-    function selectLabels(s) {
-        return s.nullable ? ["None"].concat(s.labels) : s.labels
-    }
-    function selectValueAt(s, idx) {
-        if (s.nullable)
-            return idx === 0 ? "" : s.options[idx - 1]
-        return s.options[idx]
-    }
+    // ---- helper functions ----
     function batteryPercent(value) {
         if (!value)
             return "—"
@@ -61,9 +48,11 @@ KC.ApplicationWindow {
         if (p === "—")
             return Platform.Theme.disabledTextColor
         var n = parseInt(p)
-        if (n >= 50)
+        if (isNaN(n))
+            return Platform.Theme.disabledTextColor
+        if (n >= 30)
             return Platform.Theme.positiveTextColor
-        if (n >= 20)
+        if (n >= 15)
             return Platform.Theme.neutralTextColor
         return Platform.Theme.negativeTextColor
     }
@@ -98,116 +87,6 @@ KC.ApplicationWindow {
     }
 
     pageStack.initialPage: devicePage
-
-    // ---- One setting row (declared before the pages that use it) ----
-    Component {
-        id: settingDelegate
-        Column {
-            property var setting: modelData
-            Layout.fillWidth: true
-
-            // Label + inline control
-            RowLayout {
-                width: parent.width
-                spacing: Platform.Units.largeSpacing
-
-            QQC2.Label {
-                text: setting.label
-                Layout.fillWidth: true
-                wrapMode: Text.WordWrap
-            }
-
-            // Toggle
-            QQC2.Switch {
-                visible: setting.kind === "toggle"
-                checked: setting.value === true
-                onToggled: Backend.setToggle(setting.id, checked)
-            }
-
-            // Select
-            QQC2.ComboBox {
-                visible: setting.kind === "select"
-                Layout.minimumWidth: 180
-                model: root.selectLabels(setting)
-                currentIndex: root.selectIndex(setting)
-                onActivated: (index) => Backend.setSelect(setting.id, root.selectValueAt(setting, index))
-            }
-
-            // Range
-            QQC2.Slider {
-                visible: setting.kind === "range"
-                Layout.minimumWidth: 180
-                from: setting.min
-                to: setting.max
-                stepSize: setting.step
-                value: setting.value
-                onMoved: Backend.setRange(setting.id, value)
-            }
-            QQC2.Label {
-                visible: setting.kind === "range"
-                text: setting.value
-                Layout.minimumWidth: 24
-                horizontalAlignment: Text.AlignRight
-            }
-
-            // Action button
-            QQC2.Button {
-                visible: setting.kind === "action"
-                text: "Apply"
-                onClicked: Backend.triggerAction(setting.id)
-            }
-
-            // Information (read-only)
-            QQC2.Label {
-                visible: setting.kind === "information"
-                text: setting.value
-                Layout.fillWidth: true
-                wrapMode: Text.WordWrap
-                textFormat: Text.PlainText
-                horizontalAlignment: Text.AlignRight
-            }
-        }
-
-        // Equalizer bands
-        ColumnLayout {
-            width: parent.width
-            visible: setting.kind === "equalizer"
-            spacing: Platform.Units.smallSpacing
-
-            Repeater {
-                model: setting.values
-                delegate: RowLayout {
-                    width: parent.width
-                    spacing: Platform.Units.smallSpacing
-
-                    QQC2.Label {
-                        text: (setting.bands[index] / 1000).toFixed(1) + " kHz"
-                        Layout.minimumWidth: 56
-                    }
-                    QQC2.Slider {
-                        Layout.fillWidth: true
-                        from: setting.min
-                        to: setting.max
-                        value: modelData
-                        onMoved: Backend.setEqualizerBand(setting.id, index, value)
-                    }
-                    QQC2.Label {
-                        text: modelData
-                        Layout.minimumWidth: 28
-                        horizontalAlignment: Text.AlignRight
-                    }
-                }
-            }
-        }
-
-        Rectangle {
-            width: parent.width
-            height: 1
-            color: Platform.Theme.disabledTextColor
-            opacity: 0.25
-        }
-        }
-    }
 
     // ---- Device page (dashboard when connected, pairing when not) ----
     Component {
@@ -469,24 +348,187 @@ KC.ApplicationWindow {
                 width: parent.width
                 spacing: Platform.Units.largeSpacing
 
-                QQC2.ComboBox {
-                    id: categoryCombo
+                // Sound mode
+                KC.Heading {
+                    text: "Sound Mode"
+                    level: 2
+                }
+                QQC2.ButtonGroup {
+                    id: settingsAncGroup
+                }
+                RowLayout {
                     Layout.fillWidth: true
-                    textRole: "label"
-                    model: Backend.categories
-                    currentIndex: {
-                        for (let i = 0; i < Backend.categories.length; ++i) {
-                            if (Backend.categories[i].id == Backend.currentCategory)
-                                return i
-                        }
-                        return -1
+                    spacing: Platform.Units.smallSpacing
+
+                    QQC2.Button {
+                        text: "Normal"
+                        icon.name: "audio-volume-medium"
+                        checkable: true
+                        checked: Backend.ancMode == "Normal"
+                        QQC2.ButtonGroup.group: settingsAncGroup
+                        onClicked: Backend.setAncMode("Normal")
                     }
-                    onActivated: (index) => Backend.setCategory(Backend.categories[index].id)
+                    QQC2.Button {
+                        text: "Transparency"
+                        icon.name: "audio-volume-low"
+                        checkable: true
+                        checked: Backend.ancMode == "Transparency"
+                        QQC2.ButtonGroup.group: settingsAncGroup
+                        onClicked: Backend.setAncMode("Transparency")
+                    }
+                    QQC2.Button {
+                        text: "Noise Cancelling"
+                        icon.name: "audio-volume-muted"
+                        checkable: true
+                        checked: Backend.ancMode == "NoiseCanceling"
+                        QQC2.ButtonGroup.group: settingsAncGroup
+                        onClicked: Backend.setAncMode("NoiseCanceling")
+                    }
                 }
 
+                // Equalizer
+                KC.Heading {
+                    text: "Equalizer"
+                    level: 2
+                }
+                QQC2.ComboBox {
+                    Layout.fillWidth: true
+                    model: Backend.eqPresets
+                    currentIndex: Backend.eqPresets.indexOf(Backend.eqPreset)
+                    onActivated: (index) => Backend.setSelect("presetEqualizerProfile", Backend.eqPresets[index])
+                }
                 Repeater {
-                    model: Backend.settings
-                    delegate: settingDelegate
+                    model: Backend.eqBands
+                    delegate: RowLayout {
+                        width: parent.width
+                        spacing: Platform.Units.smallSpacing
+
+                        QQC2.Label {
+                            text: (Backend.eqBandHz[index] / 1000).toFixed(1) + " kHz"
+                            Layout.minimumWidth: 56
+                        }
+                        QQC2.Slider {
+                            Layout.fillWidth: true
+                            from: Backend.eqMin
+                            to: Backend.eqMax
+                            value: modelData
+                            onMoved: Backend.setEqualizerBand("volumeAdjustments", index, value)
+                        }
+                        QQC2.Label {
+                            text: modelData
+                            Layout.minimumWidth: 28
+                            horizontalAlignment: Text.AlignRight
+                        }
+                    }
+                }
+
+                // Features
+                KC.Heading {
+                    text: "Features"
+                    level: 2
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    QQC2.Label {
+                        text: "Gaming Mode"
+                        Layout.fillWidth: true
+                    }
+                    QQC2.Switch {
+                        checked: Backend.gamingMode
+                        onToggled: Backend.setToggle("gamingMode", checked)
+                    }
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    QQC2.Label {
+                        text: "Dual Connections"
+                        Layout.fillWidth: true
+                    }
+                    QQC2.Switch {
+                        checked: Backend.dualConnections
+                        onToggled: Backend.setToggle("dualConnections", checked)
+                    }
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    QQC2.Label {
+                        text: "Touch Tone"
+                        Layout.fillWidth: true
+                    }
+                    QQC2.Switch {
+                        checked: Backend.touchTone
+                        onToggled: Backend.setToggle("touchTone", checked)
+                    }
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    QQC2.Label {
+                        text: "Low Battery Prompt"
+                        Layout.fillWidth: true
+                    }
+                    QQC2.Switch {
+                        checked: Backend.lowBatteryPrompt
+                        onToggled: Backend.setToggle("lowBatteryPrompt", checked)
+                    }
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    QQC2.Label {
+                        text: "Wind Noise Suppression"
+                        Layout.fillWidth: true
+                    }
+                    QQC2.Switch {
+                        checked: Backend.windNoiseSuppression
+                        onToggled: Backend.setToggle("windNoiseSuppression", checked)
+                    }
+                }
+
+                // Power
+                KC.Heading {
+                    text: "Power"
+                    level: 2
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    QQC2.Label {
+                        text: "Auto Power Off"
+                        Layout.fillWidth: true
+                    }
+                    QQC2.ComboBox {
+                        model: ["10m", "20m", "30m", "60m"]
+                        currentIndex: ["10m", "20m", "30m", "60m"].indexOf(Backend.autoPowerOff)
+                        onActivated: (index) => Backend.setSelect("autoPowerOff", ["10m", "20m", "30m", "60m"][index])
+                    }
+                }
+
+                // Device information
+                KC.Heading {
+                    text: "Device"
+                    level: 2
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    QQC2.Label {
+                        text: "Serial Number"
+                        Layout.fillWidth: true
+                    }
+                    QQC2.Label {
+                        text: Backend.serialNumber
+                        color: Platform.Theme.disabledTextColor
+                        textFormat: Text.PlainText
+                    }
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    QQC2.Label {
+                        text: "Firmware"
+                        Layout.fillWidth: true
+                    }
+                    QQC2.Label {
+                        text: Backend.firmwareVersion
+                        color: Platform.Theme.disabledTextColor
+                        textFormat: Text.PlainText
+                    }
                 }
             }
         }
