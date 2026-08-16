@@ -8,10 +8,10 @@
     <description>
         <p>Cross platform application for controlling settings of Soundcore headphones and earbuds.</p>
     </description>
-    <icon type="remote">https://raw.githubusercontent.com/Oppzippy/OpenSCQ30/f66a292401d8e157ffa3356e2e03eca1e8b7a860/gui/resources/com.oppzippy.OpenSCQ30.svg</icon>
-    <url type="homepage">https://github.com/Oppzippy/OpenSCQ30</url>
-    <url type="bugtracker">https://github.com/Oppzippy/OpenSCQ30/issues</url>
-    <url type="vcs-browser">https://github.com/Oppzippy/OpenSCQ30</url>
+    <icon type="remote">https://raw.githubusercontent.com/Swaggyxren/openscq30-r50i/master/gui/resources/com.oppzippy.OpenSCQ30.svg</icon>
+    <url type="homepage">https://github.com/Swaggyxren/openscq30-r50i</url>
+    <url type="bugtracker">https://github.com/Swaggyxren/openscq30-r50i/issues</url>
+    <url type="vcs-browser">https://github.com/Swaggyxren/openscq30-r50i</url>
     <url type="translate">https://translate.codeberg.org/engage/openscq30/</url>
     <developer id="com.oppzippy">
         <name>Oppzippy</name>
@@ -21,19 +21,19 @@
     <launchable type="desktop-id">com.oppzippy.OpenSCQ30.desktop</launchable>
     <screenshots>
         <screenshot type="default">
-            <image>https://raw.githubusercontent.com/Oppzippy/OpenSCQ30/f66a292401d8e157ffa3356e2e03eca1e8b7a860/screenshots/gui-sound-modes.png</image>
+            <image>https://raw.githubusercontent.com/Swaggyxren/openscq30-r50i/master/screenshots/gui-sound-modes.png</image>
             <caption>Sound Mode Settings</caption>
         </screenshot>
         <screenshot>
-            <image>https://raw.githubusercontent.com/Oppzippy/OpenSCQ30/f66a292401d8e157ffa3356e2e03eca1e8b7a860/screenshots/gui-device-selection.png</image>
+            <image>https://raw.githubusercontent.com/Swaggyxren/openscq30-r50i/master/screenshots/gui-device-selection.png</image>
             <caption>Device Selection</caption>
         </screenshot>
         <screenshot>
-            <image>https://raw.githubusercontent.com/Oppzippy/OpenSCQ30/f66a292401d8e157ffa3356e2e03eca1e8b7a860/screenshots/gui-equalizer.png</image>
+            <image>https://raw.githubusercontent.com/Swaggyxren/openscq30-r50i/master/screenshots/gui-equalizer.png</image>
             <caption>Equalizer Settings</caption>
         </screenshot>
         <screenshot>
-            <image>https://raw.githubusercontent.com/Oppzippy/OpenSCQ30/f66a292401d8e157ffa3356e2e03eca1e8b7a860/screenshots/gui-quick-presets.png</image>
+            <image>https://raw.githubusercontent.com/Swaggyxren/openscq30-r50i/master/screenshots/gui-quick-presets.png</image>
             <caption>Quick Presets</caption>
         </screenshot>
     </screenshots>
