@@ -7,7 +7,11 @@ use tabled::{Table, Tabled};
 
 pub fn handle(matches: &ArgMatches) -> anyhow::Result<()> {
     let models = {
-        let mut models = DeviceModel::VARIANTS.to_vec();
+        let mut models = DeviceModel::VARIANTS
+            .to_vec()
+            .into_iter()
+            .filter(|model| *model != DeviceModel::SoundcoreDevelopment)
+            .collect::<Vec<_>>();
         models.sort_by_key(|model| <&'static str>::from(model));
         models
     };

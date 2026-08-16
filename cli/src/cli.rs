@@ -43,7 +43,7 @@ Once the device is paired, see `openscq30 device` to interact with device settin
                         .after_help(
 "openscq30 needs to know what model your device is. This is where you provide the necessary information to be able to connect to a device. It should already be paired using bluetooth at this point.
 
-See `openscq30 list-models` for a list of supported device models. This should also be used to find the model id if you only know the name. Soundcore Life Q30 is SoundcoreA3028 for example."
+See `openscq30 list-models` for a list of supported device models. This should also be used to find the model id if you only know the name. Soundcore R50i NC is SoundcoreA3959 for example."
                         )
                         .arg(mac_address_arg.to_owned())
                         .arg(device_model_arg.to_owned())
@@ -68,12 +68,12 @@ Here is example output with the --json flag:
 [
   {
     "macAddress": "00:00:00:00:00:02",
-    "model": "SoundcoreA3028",
+    "model": "SoundcoreA3959",
     "isDemo": true
   },
   {
     "macAddress": "00:00:00:00:00:0D",
-    "model": "SoundcoreA3936",
+    "model": "SoundcoreA3959",
     "isDemo": true
   }
 ]"#

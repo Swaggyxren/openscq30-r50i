@@ -19,7 +19,7 @@ fn add_device() {
             .arg("--mac-address")
             .arg("00:00:00:00:00:00")
             .arg("--model")
-            .arg("SoundcoreA3027"),
+            .arg("SoundcoreA3959"),
             @r"
     success: true
     exit_code: 0
@@ -34,7 +34,7 @@ fn add_device() {
     exit_code: 0
     ----- stdout -----
     Device Model  	MAC Address      	Demo Mode
-    SoundcoreA3027	00:00:00:00:00:00	No       
+    SoundcoreA3959	00:00:00:00:00:00	No       
 
     ----- stderr -----
     ");
@@ -50,7 +50,7 @@ fn add_demo_device() {
             .arg("--mac-address")
             .arg("00:00:00:00:00:00")
             .arg("--model")
-            .arg("SoundcoreA3027")
+            .arg("SoundcoreA3959")
             .arg("--demo"),
             @r"
     success: true
@@ -66,7 +66,7 @@ fn add_demo_device() {
     exit_code: 0
     ----- stdout -----
     Device Model  	MAC Address      	Demo Mode
-    SoundcoreA3027	00:00:00:00:00:00	Yes      
+    SoundcoreA3959	00:00:00:00:00:00	Yes      
 
     ----- stderr -----
     ");
@@ -82,7 +82,7 @@ fn remove_device() {
             .arg("--mac-address")
             .arg("00:00:00:00:00:00")
             .arg("--model")
-            .arg("SoundcoreA3027"),
+            .arg("SoundcoreA3959"),
             @r"
     success: true
     exit_code: 0
