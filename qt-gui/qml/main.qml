@@ -53,13 +53,13 @@ KC.ApplicationWindow {
             KC.Action {
                 text: "Device"
                 icon.name: "audio-headphones"
-                onTriggered: root.pageStack.replace(root.devicePage)
+                onTriggered: root.pageStack.replace(devicePage)
             },
             KC.Action {
                 text: "Settings"
                 icon.name: "configure"
                 enabled: Backend.state === "connected"
-                onTriggered: root.pageStack.replace(root.settingsPage)
+                onTriggered: root.pageStack.replace(settingsPage)
             },
             KC.Action {
                 text: "Disconnect"
@@ -77,246 +77,9 @@ KC.ApplicationWindow {
 
     pageStack.initialPage: devicePage
 
-    // ---- Device page (dashboard when connected, pairing when not) ----
-    component DevicePage: KC.Page {
-        title: "OpenSCQ30"
-
-        ColumnLayout {
-            anchors.fill: parent
-            spacing: Platform.Units.largeSpacing
-
-            // Connected dashboard
-            ColumnLayout {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                spacing: Platform.Units.largeSpacing
-                visible: Backend.state === "connected"
-
-                KC.Heading {
-                    text: Backend.deviceName
-                    level: 1
-                    Layout.fillWidth: true
-                }
-                QQC2.Label {
-                    text: Backend.statusMessage
-                    color: Platform.Theme.disabledTextColor
-                    visible: Backend.statusMessage !== ""
-                }
-
-                // Battery
-                KC.Heading {
-                    text: "Battery"
-                    level: 2
-                }
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: Platform.Units.largeSpacing
-
-                    QQC2.Frame {
-                        Layout.fillWidth: true
-                        ColumnLayout {
-                            QQC2.Label {
-                                text: "Left"
-                                font.bold: true
-                            }
-                            QQC2.Label {
-                                text: Backend.batteryLeft !== "" ? Backend.batteryLeft : "—"
-                                font.pixelSize: 22
-                            }
-                            QQC2.Label {
-                                text: Backend.chargingLeft ? "Charging" : ""
-                                color: Platform.Theme.positiveTextColor
-                                visible: Backend.chargingLeft
-                            }
-                        }
-                    }
-
-                    QQC2.Frame {
-                        Layout.fillWidth: true
-                        ColumnLayout {
-                            QQC2.Label {
-                                text: "Right"
-                                font.bold: true
-                            }
-                            QQC2.Label {
-                                text: Backend.batteryRight !== "" ? Backend.batteryRight : "—"
-                                font.pixelSize: 22
-                            }
-                            QQC2.Label {
-                                text: Backend.chargingRight ? "Charging" : ""
-                                color: Platform.Theme.positiveTextColor
-                                visible: Backend.chargingRight
-                            }
-                        }
-                    }
-                }
-
-                // Sound mode
-                KC.Heading {
-                    text: "Sound Mode"
-                    level: 2
-                }
-                QQC2.ButtonGroup {
-                    id: ancGroup
-                }
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: Platform.Units.smallSpacing
-
-                    QQC2.Button {
-                        text: "Normal"
-                        checkable: true
-                        checked: Backend.ancMode === "Normal"
-                        QQC2.ButtonGroup.group: ancGroup
-                        onClicked: Backend.setAncMode("Normal")
-                    }
-                    QQC2.Button {
-                        text: "Transparency"
-                        checkable: true
-                        checked: Backend.ancMode === "Transparency"
-                        QQC2.ButtonGroup.group: ancGroup
-                        onClicked: Backend.setAncMode("Transparency")
-                    }
-                    QQC2.Button {
-                        text: "Noise Cancelling"
-                        checkable: true
-                        checked: Backend.ancMode === "NoiseCanceling"
-                        QQC2.ButtonGroup.group: ancGroup
-                        onClicked: Backend.setAncMode("NoiseCanceling")
-                    }
-                }
-
-                Item { Layout.fillHeight: true }
-            }
-
-            // Connecting indicator
-            ColumnLayout {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                spacing: Platform.Units.largeSpacing
-                visible: Backend.state === "connecting"
-                Layout.alignment: Qt.AlignCenter
-
-                QQC2.BusyIndicator {
-                    running: true
-                    Layout.alignment: Qt.AlignHCenter
-                }
-                QQC2.Label {
-                    text: Backend.statusMessage
-                    Layout.alignment: Qt.AlignHCenter
-                    font.pixelSize: 16
-                }
-            }
-
-            // Pairing view (disconnected)
-            ColumnLayout {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                spacing: Platform.Units.largeSpacing
-                visible: Backend.state === "disconnected"
-
-                KC.Heading {
-                    text: "Connect your Soundcore R50i NC"
-                    level: 1
-                    Layout.fillWidth: true
-                    wrapMode: Text.WordWrap
-                }
-                QQC2.Label {
-                    text: "Make sure your earbuds are powered on and Bluetooth is enabled, then pick your device below."
-                    wrapMode: Text.WordWrap
-                    Layout.fillWidth: true
-                }
-                QQC2.Label {
-                    text: Backend.statusMessage
-                    color: Platform.Theme.disabledTextColor
-                    visible: Backend.statusMessage !== ""
-                    Layout.fillWidth: true
-                }
-
-                RowLayout {
-                    Layout.fillWidth: true
-                    QQC2.Button {
-                        text: "Reconnect"
-                        icon.name: "network-connect"
-                        onClicked: Backend.startup()
-                    }
-                    QQC2.Button {
-                        text: "Scan for devices"
-                        icon.name: "view-refresh"
-                        onClicked: Backend.listDevices()
-                    }
-                    Item { Layout.fillWidth: true }
-                }
-
-                QQC2.ScrollView {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    clip: true
-
-                    ColumnLayout {
-                        width: parent.width
-                        spacing: Platform.Units.smallSpacing
-
-                        Repeater {
-                            model: Backend.availableDevices
-                            delegate: QQC2.Button {
-                                Layout.fillWidth: true
-                                text: modelData.name + "  (" + modelData.mac + ")"
-                                icon.name: "audio-headphones"
-                                onClicked: Backend.pairAndConnect(modelData.mac, false)
-                            }
-                        }
-
-                        QQC2.Label {
-                            Layout.fillWidth: true
-                            wrapMode: Text.WordWrap
-                            color: Platform.Theme.disabledTextColor
-                            text: "No devices found yet. Try scanning again."
-                            visible: Backend.availableDevices.length === 0 && !Backend.busy
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // ---- Settings page ----
-    component SettingsPage: KC.ScrollablePage {
-        title: "Settings"
-
-        ColumnLayout {
-            width: parent.width
-            spacing: Platform.Units.largeSpacing
-
-            QQC2.ComboBox {
-                id: categoryCombo
-                Layout.fillWidth: true
-                textRole: "label"
-                model: Backend.categories
-                currentIndex: {
-                    for (let i = 0; i < Backend.categories.length; ++i) {
-                        if (Backend.categories[i].id === Backend.currentCategory)
-                            return i
-                    }
-                    return -1
-                }
-                onActivated: (index) => Backend.setCategory(Backend.categories[index].id)
-            }
-
-            Repeater {
-                model: Backend.settings
-                delegate: SettingDelegate {
-                    setting: modelData
-                    width: parent.width
-                }
-            }
-        }
-    }
-
-    // ---- One setting row ----
+    // ---- One setting row (declared before the pages that use it) ----
     component SettingDelegate: Column {
         required property var setting
-        id: row
 
         // Label + inline control
         RowLayout {
@@ -417,6 +180,248 @@ KC.ApplicationWindow {
             height: 1
             color: Platform.Theme.disabledTextColor
             opacity: 0.25
+        }
+    }
+
+    // ---- Device page (dashboard when connected, pairing when not) ----
+    Component {
+        id: devicePage
+        KC.Page {
+            title: "OpenSCQ30"
+
+            ColumnLayout {
+                anchors.fill: parent
+                spacing: Platform.Units.largeSpacing
+
+                // Connected dashboard
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    spacing: Platform.Units.largeSpacing
+                    visible: Backend.state === "connected"
+
+                    KC.Heading {
+                        text: Backend.deviceName
+                        level: 1
+                        Layout.fillWidth: true
+                    }
+                    QQC2.Label {
+                        text: Backend.statusMessage
+                        color: Platform.Theme.disabledTextColor
+                        visible: Backend.statusMessage !== ""
+                    }
+
+                    // Battery
+                    KC.Heading {
+                        text: "Battery"
+                        level: 2
+                    }
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: Platform.Units.largeSpacing
+
+                        QQC2.Frame {
+                            Layout.fillWidth: true
+                            ColumnLayout {
+                                QQC2.Label {
+                                    text: "Left"
+                                    font.bold: true
+                                }
+                                QQC2.Label {
+                                    text: Backend.batteryLeft !== "" ? Backend.batteryLeft : "—"
+                                    font.pixelSize: 22
+                                }
+                                QQC2.Label {
+                                    text: Backend.chargingLeft ? "Charging" : ""
+                                    color: Platform.Theme.positiveTextColor
+                                    visible: Backend.chargingLeft
+                                }
+                            }
+                        }
+
+                        QQC2.Frame {
+                            Layout.fillWidth: true
+                            ColumnLayout {
+                                QQC2.Label {
+                                    text: "Right"
+                                    font.bold: true
+                                }
+                                QQC2.Label {
+                                    text: Backend.batteryRight !== "" ? Backend.batteryRight : "—"
+                                    font.pixelSize: 22
+                                }
+                                QQC2.Label {
+                                    text: Backend.chargingRight ? "Charging" : ""
+                                    color: Platform.Theme.positiveTextColor
+                                    visible: Backend.chargingRight
+                                }
+                            }
+                        }
+                    }
+
+                    // Sound mode
+                    KC.Heading {
+                        text: "Sound Mode"
+                        level: 2
+                    }
+                    QQC2.ButtonGroup {
+                        id: ancGroup
+                    }
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: Platform.Units.smallSpacing
+
+                        QQC2.Button {
+                            text: "Normal"
+                            checkable: true
+                            checked: Backend.ancMode === "Normal"
+                            QQC2.ButtonGroup.group: ancGroup
+                            onClicked: Backend.setAncMode("Normal")
+                        }
+                        QQC2.Button {
+                            text: "Transparency"
+                            checkable: true
+                            checked: Backend.ancMode === "Transparency"
+                            QQC2.ButtonGroup.group: ancGroup
+                            onClicked: Backend.setAncMode("Transparency")
+                        }
+                        QQC2.Button {
+                            text: "Noise Cancelling"
+                            checkable: true
+                            checked: Backend.ancMode === "NoiseCanceling"
+                            QQC2.ButtonGroup.group: ancGroup
+                            onClicked: Backend.setAncMode("NoiseCanceling")
+                        }
+                    }
+
+                    Item { Layout.fillHeight: true }
+                }
+
+                // Connecting indicator
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    spacing: Platform.Units.largeSpacing
+                    visible: Backend.state === "connecting"
+                    Layout.alignment: Qt.AlignCenter
+
+                    QQC2.BusyIndicator {
+                        running: true
+                        Layout.alignment: Qt.AlignHCenter
+                    }
+                    QQC2.Label {
+                        text: Backend.statusMessage
+                        Layout.alignment: Qt.AlignHCenter
+                        font.pixelSize: 16
+                    }
+                }
+
+                // Pairing view (disconnected)
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    spacing: Platform.Units.largeSpacing
+                    visible: Backend.state === "disconnected"
+
+                    KC.Heading {
+                        text: "Connect your Soundcore R50i NC"
+                        level: 1
+                        Layout.fillWidth: true
+                        wrapMode: Text.WordWrap
+                    }
+                    QQC2.Label {
+                        text: "Make sure your earbuds are powered on and Bluetooth is enabled, then pick your device below."
+                        wrapMode: Text.WordWrap
+                        Layout.fillWidth: true
+                    }
+                    QQC2.Label {
+                        text: Backend.statusMessage
+                        color: Platform.Theme.disabledTextColor
+                        visible: Backend.statusMessage !== ""
+                        Layout.fillWidth: true
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        QQC2.Button {
+                            text: "Reconnect"
+                            icon.name: "network-connect"
+                            onClicked: Backend.startup()
+                        }
+                        QQC2.Button {
+                            text: "Scan for devices"
+                            icon.name: "view-refresh"
+                            onClicked: Backend.listDevices()
+                        }
+                        Item { Layout.fillWidth: true }
+                    }
+
+                    QQC2.ScrollView {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        clip: true
+
+                        ColumnLayout {
+                            width: parent.width
+                            spacing: Platform.Units.smallSpacing
+
+                            Repeater {
+                                model: Backend.availableDevices
+                                delegate: QQC2.Button {
+                                    Layout.fillWidth: true
+                                    text: modelData.name + "  (" + modelData.mac + ")"
+                                    icon.name: "audio-headphones"
+                                    onClicked: Backend.pairAndConnect(modelData.mac, false)
+                                }
+                            }
+
+                            QQC2.Label {
+                                Layout.fillWidth: true
+                                wrapMode: Text.WordWrap
+                                color: Platform.Theme.disabledTextColor
+                                text: "No devices found yet. Try scanning again."
+                                visible: Backend.availableDevices.length === 0 && !Backend.busy
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // ---- Settings page ----
+    Component {
+        id: settingsPage
+        KC.ScrollablePage {
+            title: "Settings"
+
+            ColumnLayout {
+                width: parent.width
+                spacing: Platform.Units.largeSpacing
+
+                QQC2.ComboBox {
+                    id: categoryCombo
+                    Layout.fillWidth: true
+                    textRole: "label"
+                    model: Backend.categories
+                    currentIndex: {
+                        for (let i = 0; i < Backend.categories.length; ++i) {
+                            if (Backend.categories[i].id === Backend.currentCategory)
+                                return i
+                        }
+                        return -1
+                    }
+                    onActivated: (index) => Backend.setCategory(Backend.categories[index].id)
+                }
+
+                Repeater {
+                    model: Backend.settings
+                    delegate: SettingDelegate {
+                        setting: modelData
+                        width: parent.width
+                    }
+                }
+            }
         }
     }
 }

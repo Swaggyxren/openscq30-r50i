@@ -23,6 +23,7 @@ enum ConnectEvent {
 }
 
 #[derive(QObject)]
+#[allow(non_snake_case)]
 pub struct Backend {
     base: qt_base_class!(trait QObject),
 
@@ -82,7 +83,7 @@ pub struct Backend {
     quit: qt_method!(fn(&mut self)),
 
     // Tray signals.
-    open_requested: qt_signal!(),
+    openRequested: qt_signal!(),
 }
 
 impl Backend {
@@ -133,7 +134,7 @@ impl Backend {
             trigger_action: Default::default(),
             set_anc_mode: Default::default(),
             quit: Default::default(),
-            open_requested: Default::default(),
+            openRequested: Default::default(),
         }
     }
 
@@ -182,6 +183,8 @@ impl Backend {
                 self.set_busy(false);
                 self.set_state("disconnected");
                 self.set_status("No paired device yet");
+                // Populate the pairing list right away so the user can pick their device.
+                self.list_devices();
             }
         }
     }
@@ -299,8 +302,10 @@ impl Backend {
                 pinned.borrow_mut().refresh_all();
             }
         });
-        let mut watch = device.watch_for_changes();
+        // `watch_for_changes` spawns its own tokio task, so it must run inside the runtime.
+        let watch_device = device.clone();
         runtime.spawn(async move {
+            let mut watch = watch_device.watch_for_changes();
             while watch.changed().await.is_ok() {
                 refresh_cb(());
             }
@@ -312,8 +317,9 @@ impl Backend {
                 pinned.borrow_mut().handle_disconnect();
             }
         });
-        let mut status = device.connection_status();
+        let status_device = device.clone();
         runtime.spawn(async move {
+            let mut status = status_device.connection_status();
             loop {
                 if matches!(*status.borrow(), ConnectionStatus::Disconnected) {
                     disc_cb(());
@@ -593,7 +599,7 @@ impl Backend {
         match command {
             TrayCommand::SetAmbientSoundMode(mode) => self.set_anc_mode(mode),
             TrayCommand::SetEqualizerPreset(preset) => self.set_equalizer_preset(preset),
-            TrayCommand::OpenSettings => self.open_requested(),
+            TrayCommand::OpenSettings => self.openRequested(),
             TrayCommand::Quit => {
                 qmetaobject::qtcore::core_application::QCoreApplication::quit();
             }
