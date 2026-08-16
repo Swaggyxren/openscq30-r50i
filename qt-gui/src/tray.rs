@@ -62,35 +62,31 @@ impl TrayModel {
     }
 }
 
-fn information_value(
-    device: &(dyn OpenSCQ30Device + Send + Sync),
-    setting_id: &SettingId,
-) -> Option<String> {
-    match device.setting(setting_id)? {
-        Setting::Information {
-            translated_value, ..
-        } => Some(translated_value),
-        _ => None,
-    }
-}
-
-/// Turns a "5/10"-style battery value into a percentage number and a "50%" label.
+/// Reads the battery level and returns `(percentage 0-100, display label)`.
+///
+/// The device exposes a raw "8/10" fraction alongside a localized "80%" label;
+/// we parse the raw fraction when possible and fall back to the "80%" text.
 fn battery_info(
     device: &(dyn OpenSCQ30Device + Send + Sync),
     setting_id: &SettingId,
 ) -> Option<(u8, String)> {
-    let value = information_value(device, setting_id)?;
-    let Some((num, den)) = value.split_once('/') else {
-        return Some((0, value));
+    let Setting::Information {
+        value,
+        translated_value,
+    } = device.setting(setting_id)?
+    else {
+        return None;
     };
-    let (Ok(num), Ok(den)) = (num.trim().parse::<f64>(), den.trim().parse::<f64>()) else {
-        return Some((0, value));
-    };
-    if den <= 0.0 {
-        return Some((0, value));
-    }
-    let pct = (num / den * 100.0).round() as u8;
-    Some((pct, format!("{pct}%")))
+    let pct = value
+        .split_once('/')
+        .and_then(|(num, den)| {
+            let num: f64 = num.trim().parse().ok()?;
+            let den: f64 = den.trim().parse().ok()?;
+            (den > 0.0).then(|| (num / den * 100.0).round() as u8)
+        })
+        .or_else(|| translated_value.trim_end_matches('%').parse::<u8>().ok())
+        .unwrap_or(0);
+    Some((pct, translated_value))
 }
 
 /// Picks a battery icon that matches the charge level.

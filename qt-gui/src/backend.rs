@@ -196,7 +196,7 @@ impl Backend {
 
     fn set_state(&mut self, state: &str) {
         if self.state != state {
-            tracing::debug!(old = %self.state, new = %state, "backend state changed");
+            tracing::info!(old = %self.state, new = %state, "connection state changed");
             self.state = state.to_string();
             self.stateChanged();
         }
@@ -447,6 +447,9 @@ impl Backend {
         device: Arc<dyn OpenSCQ30Device + Send + Sync>,
         values: Vec<(SettingId, Value)>,
     ) {
+        for (id, value) in &values {
+            tracing::info!(setting = %id, value = %value, "setting change requested");
+        }
         self.set_busy(true);
         let runtime = self.runtime.clone();
         let qptr = QPointer::from(&*self);
@@ -465,6 +468,10 @@ impl Backend {
                 .set_setting_values(values)
                 .await
                 .map_err(|err| format!("{err:#}"));
+            match &result {
+                Ok(()) => tracing::info!("setting change applied"),
+                Err(err) => tracing::warn!(error = %err, "setting change failed"),
+            }
             done(result);
         });
     }
