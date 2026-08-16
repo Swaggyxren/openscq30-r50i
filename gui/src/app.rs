@@ -11,16 +11,20 @@ use std::{
 use cosmic::{
     Application, ApplicationExt, Apply, Task,
     app::{Core, context_drawer::ContextDrawer},
-    iced::{Length, alignment, event, keyboard},
+    iced::{Length, alignment, event, keyboard, window},
     widget::{self, menu::KeyBind, nav_bar},
 };
 use i18n_embed::unic_langid::LanguageIdentifier;
 use openscq30_i18n::Translate;
+#[cfg(target_os = "linux")]
+use openscq30_lib::settings::{SettingId, Value};
 use openscq30_lib::{
     DeviceModel, OpenSCQ30Session, device::OpenSCQ30Device, storage::PairedDevice,
 };
 use tokio::{select, sync::Semaphore};
 
+#[cfg(target_os = "linux")]
+use crate::tray::{TrayCommand, TrayHandle};
 use crate::{
     add_device::{self, AddDeviceModel},
     config::Config,
@@ -40,6 +44,10 @@ pub struct AppModel {
     available_language_names: Vec<Cow<'static, str>>,
     available_languages: Vec<Option<LanguageIdentifier>>,
     key_binds: HashMap<KeyBind, KeyBindAction>,
+    #[cfg(target_os = "linux")]
+    tray: TrayHandle,
+    #[cfg(target_os = "linux")]
+    current_device: Option<Arc<dyn OpenSCQ30Device + Send + Sync>>,
 }
 
 #[derive(Clone, Copy)]
@@ -50,6 +58,10 @@ enum KeyBindAction {
 pub struct AppFlags {
     pub config: Config,
     pub config_dir: PathBuf,
+    #[cfg(target_os = "linux")]
+    pub tray: TrayHandle,
+    #[cfg(target_os = "linux")]
+    pub tray_command_rx: tokio::sync::mpsc::UnboundedReceiver<TrayCommand>,
 }
 
 enum ContextDrawerScreen {
@@ -79,6 +91,10 @@ pub enum Message {
         key: keyboard::Key,
         physical_key: keyboard::key::Physical,
     },
+    #[cfg(target_os = "linux")]
+    TrayCommand(TrayCommand),
+    #[cfg(target_os = "linux")]
+    CloseToTray,
 }
 
 impl From<add_device::Message> for Message {
@@ -175,6 +191,15 @@ impl Application for AppModel {
     }
 
     fn init(core: Core, flags: Self::Flags) -> (Self, cosmic::app::Task<Self::Message>) {
+        let AppFlags {
+            config,
+            config_dir,
+            #[cfg(target_os = "linux")]
+            tray,
+            #[cfg(target_os = "linux")]
+            tray_command_rx,
+        } = flags;
+
         let about = widget::about::About::default()
             .name(fl!("openscq30"))
             .icon(crate::icons::openscq30())
@@ -184,10 +209,8 @@ impl Application for AppModel {
             .links([(env!("CARGO_PKG_REPOSITORY"), env!("CARGO_PKG_REPOSITORY"))]);
 
         let session = Arc::new(
-            futures::executor::block_on(OpenSCQ30Session::new(
-                flags.config_dir.join("database.sqlite"),
-            ))
-            .expect("database is required to run"),
+            futures::executor::block_on(OpenSCQ30Session::new(config_dir.join("database.sqlite")))
+                .expect("database is required to run"),
         );
         let (add_device_model, add_device_task) = AddDeviceModel::new(session.clone());
 
@@ -236,20 +259,47 @@ impl Application for AppModel {
             screen,
             session,
             warnings: VecDeque::with_capacity(5),
-            config: flags.config,
-            config_dir: flags.config_dir,
+            config,
+            config_dir,
             about,
             context_drawer_screen: None,
             available_language_names,
             available_languages,
             key_binds: key_binds(),
+            #[cfg(target_os = "linux")]
+            tray,
+            #[cfg(target_os = "linux")]
+            current_device: None,
         };
         let command = app.update_title();
-        (app, cosmic::Task::batch([command, startup_task]))
+
+        #[cfg(target_os = "linux")]
+        let tray_command_stream = {
+            let mut rx = tray_command_rx;
+            cosmic::iced::stream::channel(1, async move |mut output| {
+                while let Some(command) = rx.recv().await {
+                    if output.try_send(Message::TrayCommand(command)).is_err() {
+                        break;
+                    }
+                }
+            })
+        };
+
+        #[cfg(target_os = "linux")]
+        let task = cosmic::Task::batch([
+            command,
+            startup_task,
+            cosmic::Task::stream(tray_command_stream).map(Into::into),
+        ]);
+        #[cfg(not(target_os = "linux"))]
+        let task = cosmic::Task::batch([command, startup_task]);
+        (app, task)
     }
 
     fn subscription(&self) -> cosmic::iced::Subscription<Self::Message> {
         event::listen_with(|event, status, _window_id| match event {
+            #[cfg(target_os = "linux")]
+            event::Event::Window(window::Event::CloseRequested) => Some(Message::CloseToTray),
             event::Event::Keyboard(cosmic::iced::keyboard::Event::KeyPressed {
                 modifiers,
                 key,
@@ -379,6 +429,14 @@ impl Application for AppModel {
     fn update(&mut self, message: Self::Message) -> cosmic::app::Task<Self::Message> {
         match message {
             Message::None => (),
+            #[cfg(target_os = "linux")]
+            Message::TrayCommand(command) => return self.handle_tray_command(command),
+            #[cfg(target_os = "linux")]
+            Message::CloseToTray => {
+                if let Some(id) = self.core.main_window_id() {
+                    return window::minimize::<cosmic::Action<Message>>(id, true);
+                }
+            }
             Message::KeyPressed {
                 modifiers,
                 key,
@@ -439,12 +497,34 @@ impl Application for AppModel {
                 }
             }
             Message::ActivateConnectToDeviceScreen(device) => {
+                let device_arc = device.0.clone();
                 let (model, task) = device_settings::DeviceSettingsModel::new(
                     device,
                     self.session.quick_preset_handler(),
                     self.config_dir.to_owned(),
                 );
                 self.screen = Screen::DeviceSettings(model);
+
+                #[cfg(target_os = "linux")]
+                {
+                    self.current_device = Some(device_arc.clone());
+                    self.tray
+                        .update(|tray| tray.set_device(Some(device_arc.clone())));
+                    let tray = self.tray.clone();
+                    let watch_task = Task::future(async move {
+                        let mut watch = device_arc.watch_for_changes();
+                        while watch.changed().await.is_ok() {
+                            tray.update(|_| {});
+                        }
+                        Ok(Message::None.into())
+                    })
+                    .map(coalesce_result);
+                    return cosmic::Task::batch([
+                        task.map(Message::DeviceSettingsScreen).map(Into::into),
+                        watch_task,
+                    ]);
+                }
+                #[cfg(not(target_os = "linux"))]
                 return task.map(Message::DeviceSettingsScreen).map(Into::into);
             }
             Message::DeviceSettingsScreen(message) => {
@@ -586,7 +666,44 @@ impl AppModel {
                 Task::done(Message::Warning(message).into())
             }
             device_settings::Action::FocusTextInput(id) => widget::text_input::focus(id),
-            device_settings::Action::Disconnect => Task::done(Message::ShowAddDevice.into()),
+            device_settings::Action::Disconnect => {
+                #[cfg(target_os = "linux")]
+                {
+                    self.current_device = None;
+                    self.tray.update(|tray| tray.set_device(None));
+                }
+                Task::done(Message::ShowAddDevice.into())
+            }
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    fn handle_tray_command(&mut self, command: TrayCommand) -> cosmic::app::Task<Message> {
+        match command {
+            TrayCommand::SetAmbientSoundMode(mode) => {
+                if let Some(device) = self.current_device.clone() {
+                    return Task::future(async move {
+                        device
+                            .set_setting_values(vec![(
+                                SettingId::AmbientSoundMode,
+                                Value::String(Cow::Owned(mode)),
+                            )])
+                            .await
+                            .map_err(handle_soft_error!())?;
+                        Ok(Message::None.into())
+                    })
+                    .map(coalesce_result);
+                }
+                Task::none()
+            }
+            TrayCommand::OpenSettings => {
+                if let Some(id) = self.core.main_window_id() {
+                    window::gain_focus::<cosmic::Action<Message>>(id)
+                } else {
+                    Task::none()
+                }
+            }
+            TrayCommand::Quit => cosmic::iced::exit::<cosmic::Action<Message>>(),
         }
     }
 

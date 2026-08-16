@@ -45,6 +45,7 @@ itertools = { workspace = true }
 open = { workspace = true }
 
 [target.'cfg(target_os = "linux")'.dependencies]
+ksni = "0.2"
 libcosmic = { workspace = true, features = ["wayland"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]

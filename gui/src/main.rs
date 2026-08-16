@@ -13,6 +13,8 @@ mod i18n;
 pub mod icons;
 mod openscq30_v1_migration;
 mod throttle;
+#[cfg(target_os = "linux")]
+mod tray;
 mod utils;
 mod warning;
 
@@ -61,8 +63,25 @@ fn main() -> anyhow::Result<()> {
     i18n::init(&requested_languages);
     openscq30_lib::i18n::init(&requested_languages);
 
-    let settings = cosmic::app::Settings::default();
-    cosmic::app::run::<app::AppModel>(settings, app::AppFlags { config, config_dir })?;
+    #[cfg(target_os = "linux")]
+    let (tray_command_tx, tray_command_rx) =
+        tokio::sync::mpsc::unbounded_channel::<tray::TrayCommand>();
+    #[cfg(target_os = "linux")]
+    let tray_handle = tray::spawn(tray_command_tx);
+
+    // Closing the main window hides it to the tray rather than quitting the app.
+    let settings = cosmic::app::Settings::default().exit_on_close(false);
+    cosmic::app::run::<app::AppModel>(
+        settings,
+        app::AppFlags {
+            config,
+            config_dir,
+            #[cfg(target_os = "linux")]
+            tray: tray_handle,
+            #[cfg(target_os = "linux")]
+            tray_command_rx,
+        },
+    )?;
 
     Ok(())
 }
