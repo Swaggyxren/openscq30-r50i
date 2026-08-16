@@ -30,7 +30,7 @@ class NotificationTest : OpenSCQ30RootTestBase() {
 
     private lateinit var uiDevice: UiDevice
 
-    private val notificationTitle = By.text("Connected to ${translateDeviceModel("SoundcoreA3028")}")
+    private val notificationTitle = By.text("Connected to ${translateDeviceModel("SoundcoreA3959")}")
     private val notification: UiObject2
         get() {
             return uiDevice.findObject(notificationTitle).parent.parent.parent!!
@@ -54,7 +54,7 @@ class NotificationTest : OpenSCQ30RootTestBase() {
 
     @Test
     fun opensAppWhenNotificationIsClicked() {
-        addAndConnectToDemoDevice(composeRule, translateDeviceModel("SoundcoreA3028"))
+        addAndConnectToDemoDevice(composeRule, translateDeviceModel("SoundcoreA3959"))
         composeRule.waitForIdle()
 
         uiDevice.pressHome()
@@ -67,7 +67,7 @@ class NotificationTest : OpenSCQ30RootTestBase() {
 
     @Test
     fun disconnectsAndClosesNotificationWhenDisconnectIsClicked() {
-        addAndConnectToDemoDevice(composeRule, translateDeviceModel("SoundcoreA3028"))
+        addAndConnectToDemoDevice(composeRule, translateDeviceModel("SoundcoreA3959"))
         composeRule.waitForIdle()
 
         uiDevice.openNotification()
@@ -86,7 +86,7 @@ class NotificationTest : OpenSCQ30RootTestBase() {
 
     @Test
     fun quickPresetButtonsWork() {
-        addAndConnectToDemoDevice(composeRule, translateDeviceModel("SoundcoreA3028"))
+        addAndConnectToDemoDevice(composeRule, translateDeviceModel("SoundcoreA3959"))
         // Create the quick preset
         composeRule.onNodeWithText(getString(R.string.quick_presets)).performClick()
         composeRule.onNodeWithContentDescription(getString(R.string.create)).performClick()

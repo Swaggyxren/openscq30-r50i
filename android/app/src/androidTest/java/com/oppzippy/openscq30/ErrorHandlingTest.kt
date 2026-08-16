@@ -32,7 +32,7 @@ class ErrorHandlingTest : OpenSCQ30RootTestBase() {
     fun showsToastWhenErrorPairing() {
         fakeSession.pairThrows = true
 
-        addDemoDevice(composeRule, translateDeviceModel("SoundcoreA3028"))
+        addDemoDevice(composeRule, translateDeviceModel("SoundcoreA3959"))
         composeRule.waitForIdle() // wait for toast to be shown
         composeRule.waitUntil(
             4000,
@@ -44,7 +44,7 @@ class ErrorHandlingTest : OpenSCQ30RootTestBase() {
     fun showsToastWhenErrorConnecting() {
         fakeSession.connectWithBackendsThrows = true
 
-        addAndConnectToDemoDevice(composeRule, translateDeviceModel("SoundcoreA3028"))
+        addAndConnectToDemoDevice(composeRule, translateDeviceModel("SoundcoreA3959"))
 
         composeRule.waitForIdle() // wait for toast to be shown
         composeRule.waitUntil(

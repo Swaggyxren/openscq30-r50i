@@ -41,7 +41,7 @@ class SettingTest : OpenSCQ30RootTestBase() {
 
     @Test
     fun testCustomNoiseCanceling() {
-        addAndConnectToDemoDevice(composeRule, translateDeviceModel("SoundcoreA3951"))
+        addAndConnectToDemoDevice(composeRule, translateDeviceModel("SoundcoreA3959"))
         composeRule.onNodeWithText(translateCategoryId("soundModes")).performClick()
         composeRule.onNodeWithTag(translateSettingId("customNoiseCanceling") + " slider")
             .assertRangeValueApproxEquals(0f)
@@ -51,7 +51,7 @@ class SettingTest : OpenSCQ30RootTestBase() {
 
     @Test
     fun testNoiseCancelingMode() {
-        addAndConnectToDemoDevice(composeRule, translateDeviceModel("SoundcoreA3951"))
+        addAndConnectToDemoDevice(composeRule, translateDeviceModel("SoundcoreA3959"))
         composeRule.onNodeWithText(translateCategoryId("soundModes")).performClick()
         composeRule.onNodeWithText("Noise Canceling").performClick()
         composeRule.onNodeWithText("Normal").performClick().assertExists()
@@ -60,7 +60,7 @@ class SettingTest : OpenSCQ30RootTestBase() {
 
     @Test
     fun testPresetEqualizerProfile() {
-        addAndConnectToDemoDevice(composeRule, translateDeviceModel("SoundcoreA3951"))
+        addAndConnectToDemoDevice(composeRule, translateDeviceModel("SoundcoreA3959"))
         composeRule.onNodeWithText(translateCategoryId("equalizer")).performClick()
         composeRule.onNodeWithText("Acoustic").performClick()
         // TODO assert that Acoustic is selected
@@ -68,7 +68,7 @@ class SettingTest : OpenSCQ30RootTestBase() {
 
     @Test
     fun testCustomEqualizerProfile() {
-        addAndConnectToDemoDevice(composeRule, translateDeviceModel("SoundcoreA3951"))
+        addAndConnectToDemoDevice(composeRule, translateDeviceModel("SoundcoreA3959"))
         composeRule.onNodeWithText(translateCategoryId("equalizer")).performClick()
         composeRule.onNodeWithText(getString(R.string.custom)).performClick()
 
@@ -89,7 +89,7 @@ class SettingTest : OpenSCQ30RootTestBase() {
 
     @Test
     fun testExportEqualizerProfile() {
-        addAndConnectToDemoDevice(composeRule, translateDeviceModel("SoundcoreA3951"))
+        addAndConnectToDemoDevice(composeRule, translateDeviceModel("SoundcoreA3959"))
 
         // Add a custom equalizer profile
         // TODO add multiple profiles
@@ -109,7 +109,7 @@ class SettingTest : OpenSCQ30RootTestBase() {
 
     @Test
     fun testEqualizer() {
-        addAndConnectToDemoDevice(composeRule, translateDeviceModel("SoundcoreA3951"))
+        addAndConnectToDemoDevice(composeRule, translateDeviceModel("SoundcoreA3959"))
         composeRule.onNodeWithText(translateCategoryId("equalizer")).performClick()
         composeRule.onNodeWithText(getString(R.string.custom)).performClick()
         val firstBandTextInput = hasTestTag("equalizerInput100")
@@ -122,7 +122,7 @@ class SettingTest : OpenSCQ30RootTestBase() {
 
     @Test
     fun testImportString() {
-        addAndConnectToDemoDevice(composeRule, translateDeviceModel("SoundcoreA3951"))
+        addAndConnectToDemoDevice(composeRule, translateDeviceModel("SoundcoreA3959"))
         composeRule.onNodeWithText(translateCategoryId("equalizerImportExport")).performClick()
         composeRule.onNodeWithText(translateSettingId("importCustomEqualizerProfiles")).performTextInput(
             """[{"name": "test profile", "volumeAdjustments": [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]}]""",
@@ -134,7 +134,7 @@ class SettingTest : OpenSCQ30RootTestBase() {
 
     @Test
     fun testA3116PresetEqualizerProfile() {
-        addAndConnectToDemoDevice(composeRule, translateDeviceModel("SoundcoreA3116"))
+        addAndConnectToDemoDevice(composeRule, translateDeviceModel("SoundcoreA3959"))
         composeRule.onNodeWithText(translateCategoryId("equalizer")).performClick()
         composeRule.onNodeWithText("Bass Up").performClick()
         composeRule.onNode(hasTextExactly(getString(R.string.none)) and hasAnyAncestor(isDialog()))
@@ -144,7 +144,7 @@ class SettingTest : OpenSCQ30RootTestBase() {
 
     @Test
     fun testA3116CustomEqualizerProfile() {
-        addAndConnectToDemoDevice(composeRule, translateDeviceModel("SoundcoreA3116"))
+        addAndConnectToDemoDevice(composeRule, translateDeviceModel("SoundcoreA3959"))
         composeRule.onNodeWithText(translateCategoryId("equalizer")).performClick()
 
         // Add a custom equalizer profile

@@ -57,16 +57,11 @@ private const val SETTING_ID_PRESET_EQUALIZER_PROFILE = "presetEqualizerProfile"
 private const val SETTING_ID_CUSTOM_EQUALIZER_PROFILE = "customEqualizerProfile"
 private const val SETTING_ID_VOLUME_ADJUSTMENTS = "volumeAdjustments"
 
-val deviceBlacklist = hashSetOf(
-    "SoundcoreA3116", // volume adjustments are unknown, so they would be shown as all 0s
-)
-
 object SoundcoreEqualizerScreen : CategoryOverride {
     // Be overly cautious and ensure all settings are as expected. It's better to not use this override when we should
     // rather than the other way around.
     override fun shouldOverride(deviceModel: String, settings: List<Pair<String, Setting>>): Boolean {
         if (!deviceModel.startsWith("Soundcore")) return false
-        if (deviceModel in deviceBlacklist) return false
         if (settings.size != 3) return false
 
         getSettingById<Setting.PresetEqualizerProfileSelect>(

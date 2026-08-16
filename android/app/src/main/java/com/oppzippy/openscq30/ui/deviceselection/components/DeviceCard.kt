@@ -122,29 +122,6 @@ private fun DeviceModelIcon(modifier: Modifier, model: String) {
     // TODO lint that checks DeviceModel rust enum and ensures all variants are listed here
     // or even better, generate a kotlin sealed class from the rust enum
     when (model) {
-        "SoundcoreA3004" -> HeadphonesIcon(modifier)
-        "SoundcoreA3027" -> HeadphonesIcon(modifier)
-        "SoundcoreA3028" -> HeadphonesIcon(modifier)
-        "SoundcoreA3029" -> HeadphonesIcon(modifier)
-        "SoundcoreA3030" -> HeadphonesIcon(modifier)
-        "SoundcoreA3031" -> HeadphonesIcon(modifier)
-        "SoundcoreA3033" -> HeadphonesIcon(modifier)
-        "SoundcoreA3035" -> HeadphonesIcon(modifier)
-        "SoundcoreA3040" -> HeadphonesIcon(modifier)
-        "SoundcoreA3116" -> SpeakerIcon(modifier)
-        "SoundcoreA3926" -> EarbudsIcon(modifier)
-        "SoundcoreA3930" -> EarbudsIcon(modifier)
-        "SoundcoreA3931" -> EarbudsIcon(modifier)
-        "SoundcoreA3933" -> EarbudsIcon(modifier)
-        "SoundcoreA3935" -> EarbudsIcon(modifier)
-        "SoundcoreA3936" -> EarbudsIcon(modifier)
-        "SoundcoreA3939" -> EarbudsIcon(modifier)
-        "SoundcoreA3945" -> EarbudsIcon(modifier)
-        "SoundcoreA3947" -> EarbudsIcon(modifier)
-        "SoundcoreA3948" -> EarbudsIcon(modifier)
-        "SoundcoreA3949" -> EarbudsIcon(modifier)
-        "SoundcoreA3951" -> EarbudsIcon(modifier)
-        "SoundcoreA3955" -> EarbudsIcon(modifier)
         "SoundcoreA3959" -> EarbudsIcon(modifier)
         "SoundcoreDevelopment" -> HeadphonesIcon(modifier)
         else -> HeadphonesIcon(modifier)
@@ -169,22 +146,13 @@ private fun EarbudsIcon(modifier: Modifier) {
     )
 }
 
-@Composable
-private fun SpeakerIcon(modifier: Modifier) {
-    Icon(
-        modifier = modifier,
-        painter = painterResource(R.drawable.speaker_24px),
-        contentDescription = stringResource(R.string.audio_speaker),
-    )
-}
-
 @Preview(showBackground = true)
 @Composable
 private fun PreviewDeviceCard() {
     OpenSCQ30Theme {
         ConnectToDeviceCard(
-            name = "Soundcore Life Q30",
-            model = "SoundcoreA3028",
+            name = "Soundcore R50i NC",
+            model = "SoundcoreA3959",
             macAddress = "AC:12:2F:C8:6E:08",
             isDemo = false,
         )
