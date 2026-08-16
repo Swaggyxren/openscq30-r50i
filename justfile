@@ -1,6 +1,5 @@
 mod android
 mod cli
-mod gui
 mod i18n
 mod i18n-macros
 mod lib
@@ -16,22 +15,15 @@ list:
 
 [doc("Run a fully optimized release build")]
 [group("build")]
-build-gui features='': create-build-output-dir
-    just gui::build release '{{ features }}'
-    cp target/release/openscq30-gui '{{ build-output-dir }}/'
+build-gui: create-build-output-dir
+    cargo build --profile release -p openscq30-qt-gui
+    cp target/release/openscq30-qt-gui '{{ build-output-dir }}/'
 
 [doc("Run a release build with excessively slow optimizations disabled")]
 [group("build")]
-build-gui-fast features='': create-build-output-dir
-    just gui::build release-fast '{{ features }}'
-    cp target/release-fast/openscq30-gui '{{ build-output-dir }}/'
-
-[doc("Build the windows installer. The gui must be built first.")]
-[group("build")]
-[windows]
-build-gui-installer: create-build-output-dir
-    ./packaging/windows/build.sh
-    cp packaging/windows/Output/openscq30-gui-installer.exe '{{ build-output-dir }}/'
+build-gui-fast: create-build-output-dir
+    cargo build --profile release-fast -p openscq30-qt-gui
+    cp target/release-fast/openscq30-qt-gui '{{ build-output-dir }}/'
 
 [doc("Run a fully optimized release build")]
 [group("build")]
@@ -109,9 +101,10 @@ create-build-output-dir:
     mkdir -p build-output
 
 [doc("Run all tests")]
-test: lib::test cli::test gui::test android::test
+test: lib::test cli::test android::test
+    cargo test -p openscq30-qt-gui
 
-test-cov: lib::test-cov cli::test-cov gui::test-cov android::test-cov
+test-cov: lib::test-cov cli::test-cov android::test-cov
 
 llvm-cov-clean:
     cargo llvm-cov clean --workspace
@@ -136,22 +129,22 @@ test-cov-report format='lcov':
 
     cargo llvm-cov report $format_args
 
-[doc("Install openscq30-gui and openscq30-cli to the specified path such as '/usr/local' or '.local'. Requires building both first using either build or build-fast. This will also install opnescq30-cli shell completions for all shells installed on the system. This can be disabled by setting OPENSCQ30_SKIP_SHELL_COMPLETIONS=1.")]
+[doc("Install openscq30-qt-gui and openscq30-cli to the specified path such as '/usr/local' or '.local'. Requires building both first using either build or build-fast. This will also install opnescq30-cli shell completions for all shells installed on the system. This can be disabled by setting OPENSCQ30_SKIP_SHELL_COMPLETIONS=1.")]
 [linux]
 install path:
-    just gui::install '{{ path }}'
+    install -Dm755 target/release/openscq30-qt-gui '{{ path }}/bin/openscq30-qt-gui'
     just cli::install '{{ path }}'
 
-[doc("Uninstall openscq30-gui and openscq30-cli from the specified path.")]
+[doc("Uninstall openscq30-qt-gui and openscq30-cli from the specified path.")]
 [linux]
 uninstall path:
-    just gui::uninstall '{{ path }}'
+    rm -f '{{ path }}/bin/openscq30-qt-gui'
     just cli::uninstall '{{ path }}'
 
 alias fmt := format
 
 [parallel]
-format: android::format cli::format gui::format i18n::format i18n-macros::format lib::format lib-macros::format lib-has::format format-docs
+format: android::format cli::format i18n::format i18n-macros::format lib::format lib-macros::format lib-has::format format-docs
 
 [private]
 [script("bash")]
@@ -164,7 +157,7 @@ format-docs:
     fi
 
 [parallel]
-format-check: android::format-check cli::format-check gui::format-check i18n::format-check i18n-macros::format-check lib::format-check lib-macros::format-check lib-has::format-check format-check-docs
+format-check: android::format-check cli::format-check i18n::format-check i18n-macros::format-check lib::format-check lib-macros::format-check lib-has::format-check format-check-docs
 
 [private]
 [script("bash")]

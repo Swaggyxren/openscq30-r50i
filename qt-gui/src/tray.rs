@@ -10,7 +10,7 @@ use openscq30_lib::{
 };
 use tokio::sync::mpsc::UnboundedSender;
 
-/// Commands sent from the tray's D-Bus thread to the GUI's event loop.
+/// Commands sent from the tray's D-Bus thread to the Qt event loop.
 #[derive(Debug, Clone)]
 pub enum TrayCommand {
     SetAmbientSoundMode(String),
@@ -18,7 +18,7 @@ pub enum TrayCommand {
     Quit,
 }
 
-/// The single supported ANC modes, in the order they appear in the tray radio group.
+/// The ANC modes supported by the R50i NC, in the order they appear in the tray radio group.
 const ANC_MODES: [&str; 3] = ["Normal", "Transparency", "NoiseCanceling"];
 const ANC_LABELS: [&str; 3] = ["Normal", "Transparency", "Noise Cancelling"];
 

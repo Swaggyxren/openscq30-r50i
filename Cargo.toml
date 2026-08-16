@@ -5,10 +5,10 @@ members = [
     "lib-macros",
     "android",
     "uniffi-bindgen",
-    "gui",
     "i18n",
     "i18n-macros",
     "lib-has",
+    "qt-gui",
 ]
 resolver = "3"
 
@@ -93,7 +93,6 @@ predicates = "3"
 bluer = "0.17"
 hex = "0.4"
 async-trait = "0.1"
-libcosmic = { git = "https://github.com/pop-os/libcosmic.git" }
 rusqlite = "0.40"
 syn = "3"
 quote = "1"
@@ -117,12 +116,3 @@ embed-resource = "3"
 pathfinding = "4"
 palette = "0.7"
 bitflags = "2"
-
-[patch.'https://github.com/wash2/accesskit']
-accesskit = { git = "https://github.com/Oppzippy/accesskit.git", branch = "iced-0.14" }
-accesskit_windows = { git = "https://github.com/Oppzippy/accesskit.git", branch = "iced-0.14" }
-accesskit_macos = { git = "https://github.com/Oppzippy/accesskit.git", branch = "iced-0.14" }
-accesskit_winit = { git = "https://github.com/Oppzippy/accesskit.git", branch = "iced-0.14" }
-
-[patch.'https://github.com/pop-os/softbuffer']
-softbuffer = { git = "https://github.com/Oppzippy/softbuffer.git" }

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=OpenSCQ30
+Comment=Control Soundcore R50i NC earbuds
+Exec=openscq30-qt-gui
+Icon=com.oppzippy.OpenSCQ30
+Terminal=false
+Categories=Utility;Settings;Qt;KDE;
+Keywords=Soundcore;Bluetooth;Wireless;Headphones;Earbuds;R50i;ANC;
