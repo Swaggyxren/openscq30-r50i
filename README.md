@@ -1,97 +1,64 @@
-## About
+# OpenSCQ30 — R50i NC
 
-OpenSCQ30 is free software for controlling settings for Soundcore headphones and earbuds. It was originally intended for the Soundcore Life Q30, after which the project was named, but a range of devices are now supported.
+A personal fork of [OpenSCQ30](https://github.com/Oppzippy/OpenSCQ30) that controls settings for a **single device**: the Soundcore **R50i NC** (internal model id `SoundcoreA3959`). All other Soundcore models have been removed to keep the codebase and UI simple.
 
-### Supported Platforms
+## Features
 
-[x] Windows - Ready  
-[x] Linux - Ready  
-[x] Android - Ready
+- **Desktop GUI** ([libcosmic](https://github.com/pop-os/libcosmic)) for Linux — launches straight into the R50i NC settings and auto-connects on startup.
+- **KDE system tray** menu (`ksni`): ANC mode toggle (Normal / Transparency / Noise Cancelling), live battery level, "Open Settings", and "Quit".
+- **CLI** (`openscq30`) for scripting and quick control.
+- **Android app** built on the same Rust core (kept for completeness; the desktop GUI is the primary target).
 
-### Supported Devices
+## Supported device
 
-If there's a device not in this list that you want to see supported, check if there's an issue for it, and give the issue for it a 👍 so that I can sort by reactions and prioritize. Otherwise, please open an issue to request support for the device.
-
-| Model  | Name                         |
-| ------ | ---------------------------- |
-| A3004  | Soundcore Q20I               |
-| A3027  | Soundcore Life Q35           |
-| A3028  | Soundcore Q30 / Life Q30     |
-| A3029  | Soundcore Life Tune          |
-| A3030  | Soundcore Life Tune Pro      |
-| A3031  | Soundcore Vortex             |
-| A3033  | Soundcore Life 2 Neo         |
-| A3035  | Soundcore Space One          |
-| A3040  | Soundcore Space Q45          |
-| A3062  | Soundcore Space One Pro      |
-| A3116  | Soundcore Motion+            |
-| A3876  | Soundcore V20i               |
-| A3909  | Soundcore Liberty 2 Pro      |
-| A3926  | Soundcore Life Dot 2S        |
-| A3930  | Soundcore Liberty 2 Pro+     |
-| A3931  | Soundcore Life Dot 2 NC      |
-| A3933  | Soundcore Life Note 3        |
-| A3935  | Soundcore Life A2 NC         |
-| A3936  | Soundcore Space A40          |
-| A3939  | Soundcore Life P3            |
-| A3945  | Soundcore Life Note 3S       |
-| A3947  | Soundcore Liberty 4 NC       |
-| A3948  | Soundcore A20i               |
-| A3949  | Soundcore P20i / P25i / R50i |
-| A3951  | Soundcore Liberty Air 2 Pro  |
-| A3952  | Soundcore Liberty 3 Pro      |
-| A3954  | Soundcore Liberty 4 Pro      |
-| A3955  | Soundcore P40i               |
-| A3957  | Soundcore Liberty 5          |
-| A3959  | Soundcore P30i / R50i NC     |
-| A3968  | Soundcore Sport X20          |
-| D1101  | Soundcore C50i               |
-| D1202  | Soundcore P31i               |
-| D1202C | Soundcore R60i NC            |
-
-## Installing
-
-See [GitHub Releases](https://github.com/Oppzippy/OpenSCQ30/releases). All files are signed with [my GPG key](https://kylescheuing.com/publickey.txt).
-
-[![Flathub](https://img.shields.io/flathub/v/com.oppzippy.OpenSCQ30)](https://flathub.org/apps/com.oppzippy.OpenSCQ30)
-[![IzzyOnDroid](https://img.shields.io/endpoint?url=https://apt.izzysoft.de/fdroid/api/v1/shield/com.oppzippy.openscq30)](https://apt.izzysoft.de/fdroid/index/apk/com.oppzippy.openscq30)
-
-[![Packaging status](https://repology.org/badge/vertical-allrepos/openscq30.svg)](https://repology.org/project/openscq30/versions)
-
-## Mirrors
-
-Issues and pull requests are accepted on both GitHub and Codeberg, although CI and releases are only on github.
-
-- GitHub: https://github.com/Oppzippy/OpenSCQ30
-- Codeberg: https://codeberg.org/Oppzippy/OpenSCQ30
-
-## Contributing
-
-### Code
-
-See [docs/development.md](docs/development.md)
-
-### Translations
-
-[![Translation status](https://translate.codeberg.org/widget/openscq30/multi-auto.svg)](https://translate.codeberg.org/engage/openscq30/)
-
-## Demo
-
-### Desktop
-
-[desktop-demo.webm](https://github.com/user-attachments/assets/3df615f5-2e5d-44e8-9604-f5175c11ea5b)
-
-### Android
-
-[android-demo.webm](https://github.com/user-attachments/assets/bf48a9f3-db73-4f26-b1e7-edac5f3fba32)
+| Model  | Name              |
+| ------ | ----------------- |
+| A3959  | Soundcore R50i NC |
 
 ## Building
 
-- Windows: [docs/build-windows.md](docs/build-windows.md)
-- MacOS: [docs/build-macos.md](docs/build-macos.md)
-- Linux: [docs/build-linux.md](docs/build-linux.md)
-- Android: [docs/build-android.md](docs/build-android.md)
+Requirements: Rust ≥ 1.85 (edition 2024) and [just](https://github.com/casey/just).
 
-## Running Tests
+Linux GUI build dependencies (Debian/Ubuntu):
 
-`just test` will run all unit and integration tests. To run tests for a specific package, use `just gui/ test` for example.
+```sh
+sudo apt install pkg-config libdbus-1-dev libxkbcommon-dev
+```
+
+Build the GUI and CLI:
+
+```sh
+just build-gui-fast     # -> build-output/openscq30-gui
+just build-cli-fast     # -> build-output/openscq30
+```
+
+Run tests:
+
+```sh
+just test
+```
+
+## Usage
+
+```sh
+# GUI (auto-connects to the paired R50i NC; shows the pairing screen if none is paired)
+cargo run -p openscq30-gui
+
+# CLI: pair a device (separate from OS Bluetooth pairing)
+openscq30 paired-devices add --mac-address <MAC> --model SoundcoreA3959
+
+# CLI: list settings and change the ANC mode
+openscq30 device --mac-address <MAC> list-settings
+openscq30 device --mac-address <MAC> setting --set ambientSoundMode=NoiseCanceling
+```
+
+Add `--demo` to `paired-devices add` to use a virtual device without hardware connected.
+
+## Notes
+
+- This is a **personal fork** for one device; it is not intended to be merged back upstream.
+- Closing the GUI window hides it to the system tray rather than quitting — use the tray's "Quit" item to exit.
+
+## License
+
+[GPL-3.0-or-later](LICENSE.txt), inherited from upstream.
