@@ -10,11 +10,7 @@ use crate::{
     api::settings::CategoryId,
     devices::soundcore::common::{
         packet::{self, PacketIOController},
-        structures::{
-            AutoPlayPause, DisableAllButtons, Flag, GamingMode, Ldac, LowBatteryPrompt,
-            SoundLeakCompensation, SurroundSound, TouchLock, TouchTone, VoicePrompt,
-            WearingDetection, WearingTone,
-        },
+        structures::{Flag, GamingMode, LowBatteryPrompt, TouchTone},
     },
     settings::SettingId,
 };
@@ -61,61 +57,6 @@ flag!(
 );
 
 flag!(
-    SoundLeakCompensation,
-    FlagConfiguration {
-        category_id: CategoryId::Miscellaneous,
-        setting_id: SettingId::SoundLeakCompensation,
-        set_command: packet::outbound::SET_SOUND_LEAK_COMPENSATION_COMMAND,
-        update_command: None,
-        is_inverted: false,
-    },
-);
-
-flag!(
-    SurroundSound,
-    FlagConfiguration {
-        category_id: CategoryId::Miscellaneous,
-        setting_id: SettingId::SurroundSound,
-        set_command: packet::outbound::SET_SURROUND_SOUND_COMMAND,
-        update_command: None,
-        is_inverted: false,
-    },
-);
-
-flag!(
-    AutoPlayPause,
-    FlagConfiguration {
-        category_id: CategoryId::Miscellaneous,
-        setting_id: SettingId::AutoPlayPause,
-        set_command: packet::outbound::SET_AUTO_PLAY_PAUSE_COMMAND,
-        update_command: None,
-        is_inverted: false,
-    },
-);
-
-flag!(
-    WearingTone,
-    FlagConfiguration {
-        category_id: CategoryId::Miscellaneous,
-        setting_id: SettingId::WearingTone,
-        set_command: packet::outbound::SET_WEARING_TONE_COMMAND,
-        update_command: None,
-        is_inverted: false,
-    },
-);
-
-flag!(
-    TouchLock,
-    FlagConfiguration {
-        category_id: CategoryId::Miscellaneous,
-        setting_id: SettingId::TouchLock,
-        set_command: packet::outbound::SET_TOUCH_LOCK_COMMAND,
-        update_command: None,
-        is_inverted: false,
-    },
-);
-
-flag!(
     LowBatteryPrompt,
     FlagConfiguration {
         category_id: CategoryId::Miscellaneous,
@@ -123,50 +64,6 @@ flag!(
         set_command: packet::outbound::SET_LOW_BATTERY_PROMPT_COMMAND,
         update_command: None,
         is_inverted: false,
-    },
-);
-
-flag!(
-    WearingDetection,
-    FlagConfiguration {
-        category_id: CategoryId::Miscellaneous,
-        setting_id: SettingId::WearingDetection,
-        set_command: packet::outbound::SET_WEARING_DETECTION_COMMAND,
-        update_command: None,
-        is_inverted: false,
-    },
-);
-
-flag!(
-    VoicePrompt,
-    FlagConfiguration {
-        category_id: CategoryId::Miscellaneous,
-        setting_id: SettingId::VoicePrompt,
-        set_command: packet::Command([0x01, 0x90]),
-        update_command: Some(packet::Command([0x01, 0x10])),
-        is_inverted: false,
-    },
-);
-
-flag!(
-    Ldac,
-    FlagConfiguration {
-        category_id: CategoryId::Miscellaneous,
-        setting_id: SettingId::Ldac,
-        set_command: packet::Command([0x01, 0xFF]),
-        update_command: Some(packet::Command([0x01, 0x7F])),
-        is_inverted: false,
-    },
-);
-
-flag!(
-    DisableAllButtons,
-    FlagConfiguration {
-        category_id: CategoryId::ButtonConfiguration,
-        setting_id: SettingId::ButtonsEnabled,
-        set_command: packet::Command([0x10, 0x94]),
-        update_command: None,
-        is_inverted: true,
     },
 );
 

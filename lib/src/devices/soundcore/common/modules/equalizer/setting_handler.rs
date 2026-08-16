@@ -465,7 +465,7 @@ mod tests {
     use crate::{
         DeviceModel,
         devices::soundcore::common::{
-            modules::equalizer::common_settings, structures::CommonEqualizerConfiguration,
+            modules::equalizer::common_settings_type_2, structures::CommonEqualizerConfiguration,
         },
         storage::OpenSCQ30Database,
     };
@@ -495,7 +495,7 @@ mod tests {
         let setting_handler =
             EqualizerSettingHandler::<TestStateWithEq, 2, 10, 8, 10, -120, 134, 1>::new(
                 profile_store.clone(),
-                common_settings(),
+                common_settings_type_2(),
             );
         (database, setting_handler, profile_store)
     }

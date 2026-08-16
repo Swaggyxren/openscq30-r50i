@@ -25,14 +25,11 @@ use crate::{
                     self, button_configuration::ButtonConfigurationSettings,
                     reset_button_configuration::ResetButtonConfigurationPending,
                 },
-                packet::{self, PacketIOController, outbound::ToPacket},
+                packet::{self, PacketIOController},
                 state::Update,
                 structures::{
-                    AmbientSoundModeCycleTws, AutoPlayPause, AutoPowerOff, BatteryLevel,
-                    CaseBatteryLevel, DisableAllButtons, DualBatteryLevel, DualConnections,
-                    EqualizerConfiguration, GamingMode, Ldac, LimitHighVolume, LowBatteryPrompt,
-                    SoundLeakCompensation, SurroundSound, TouchLock, TouchTone, VoicePrompt,
-                    WearingDetection, WearingTone, button_configuration::ButtonStatusCollection,
+                    AutoPowerOff, DualConnections, EqualizerConfiguration, GamingMode,
+                    LowBatteryPrompt, TouchTone, button_configuration::ButtonStatusCollection,
                 },
             },
         },
@@ -41,17 +38,10 @@ use crate::{
 };
 
 use super::{
-    modules::{
-        ModuleCollection, ModuleCollectionSpawnPacketHandlerExt, sound_modes::AvailableSoundModes,
-    },
-    packet::{
-        inbound::{FromPacketBody, TryToPacket},
-        outbound::RequestState,
-    },
+    modules::{ModuleCollection, ModuleCollectionSpawnPacketHandlerExt},
+    packet::inbound::FromPacketBody,
     structures::{
-        AgeRange, AmbientSoundModeCycle, BasicHearId, CustomHearId, DualBattery,
-        DualFirmwareVersion, FirmwareVersion, Gender, SerialNumber, SingleBattery, SoundModes,
-        TwsStatus,
+        AmbientSoundModeCycle, DualBattery, DualFirmwareVersion, SerialNumber, TwsStatus,
     },
 };
 
@@ -62,20 +52,6 @@ type FetchStateFn<StateType> = Box<
         + Send
         + Sync,
 >;
-
-pub async fn fetch_state_from_state_update_packet<State, StateUpdate>(
-    packet_io: Arc<PacketIOController>,
-) -> device::Result<State>
-where
-    StateUpdate: FromPacketBody + Default + Into<State>,
-{
-    let state_update_packet: StateUpdate = packet_io
-        .send_with_response(&RequestState.to_packet())
-        .await?
-        .try_to_packet()
-        .map_err(|err| device::Error::other(err))?;
-    Ok(state_update_packet.into())
-}
 
 #[derive(Copy, Clone)]
 pub struct SoundcoreDeviceConfig {
@@ -255,122 +231,6 @@ where
         &self.packet_io_controller
     }
 
-    pub fn database(&self) -> Arc<OpenSCQ30Database> {
-        self.database.clone()
-    }
-
-    pub fn device_model(&self) -> DeviceModel {
-        self.device_model
-    }
-
-    pub fn change_notify(&self) -> watch::Sender<()> {
-        self.change_notify.clone()
-    }
-
-    pub fn sound_modes(&mut self, available_sound_modes: AvailableSoundModes)
-    where
-        StateType: Has<SoundModes>,
-    {
-        self.module_collection
-            .add_sound_modes(self.packet_io_controller.clone(), available_sound_modes);
-    }
-
-    pub async fn equalizer<
-        const CHANNELS: usize,
-        const BANDS: usize,
-        const VISIBLE_BANDS: usize,
-        const PRESET_BANDS: usize,
-        const MIN_VOLUME: i16,
-        const MAX_VOLUME: i16,
-        const FRACTION_DIGITS: u8,
-    >(
-        &mut self,
-        settings: modules::equalizer::EqualizerModuleSettings<
-            VISIBLE_BANDS,
-            PRESET_BANDS,
-            MIN_VOLUME,
-            MAX_VOLUME,
-            FRACTION_DIGITS,
-        >,
-    ) where
-        StateType:
-            Has<EqualizerConfiguration<CHANNELS, BANDS, MIN_VOLUME, MAX_VOLUME, FRACTION_DIGITS>>,
-    {
-        self.module_collection
-            .add_equalizer(
-                self.packet_io_controller.clone(),
-                self.database.clone(),
-                self.device_model,
-                self.change_notify.clone(),
-                settings,
-            )
-            .await;
-    }
-
-    pub async fn equalizer_tws<
-        const CHANNELS: usize,
-        const BANDS: usize,
-        const VISIBLE_BANDS: usize,
-        const PRESET_BANDS: usize,
-        const MIN_VOLUME: i16,
-        const MAX_VOLUME: i16,
-        const FRACTION_DIGITS: u8,
-    >(
-        &mut self,
-        settings: modules::equalizer::EqualizerModuleSettings<
-            VISIBLE_BANDS,
-            PRESET_BANDS,
-            MIN_VOLUME,
-            MAX_VOLUME,
-            FRACTION_DIGITS,
-        >,
-    ) where
-        StateType: Has<EqualizerConfiguration<CHANNELS, BANDS, MIN_VOLUME, MAX_VOLUME, FRACTION_DIGITS>>
-            + Has<TwsStatus>,
-    {
-        self.module_collection
-            .add_equalizer_tws(
-                self.packet_io_controller.clone(),
-                self.database.clone(),
-                self.device_model,
-                self.change_notify.clone(),
-                settings,
-            )
-            .await;
-    }
-
-    pub async fn equalizer_with_drc<
-        const CHANNELS: usize,
-        const BANDS: usize,
-        const VISIBLE_BANDS: usize,
-        const PRESET_BANDS: usize,
-        const MIN_VOLUME: i16,
-        const MAX_VOLUME: i16,
-        const FRACTION_DIGITS: u8,
-    >(
-        &mut self,
-        settings: modules::equalizer::EqualizerModuleSettings<
-            VISIBLE_BANDS,
-            PRESET_BANDS,
-            MIN_VOLUME,
-            MAX_VOLUME,
-            FRACTION_DIGITS,
-        >,
-    ) where
-        StateType:
-            Has<EqualizerConfiguration<CHANNELS, BANDS, MIN_VOLUME, MAX_VOLUME, FRACTION_DIGITS>>,
-    {
-        self.module_collection
-            .add_equalizer_with_drc(
-                self.packet_io_controller.clone(),
-                self.database.clone(),
-                self.device_model,
-                self.change_notify.clone(),
-                settings,
-            )
-            .await;
-    }
-
     pub async fn equalizer_with_drc_tws<
         const CHANNELS: usize,
         const BANDS: usize,
@@ -403,111 +263,6 @@ where
             .await;
     }
 
-    pub async fn equalizer_with_basic_hear_id_tws<
-        const CHANNELS: usize,
-        const BANDS: usize,
-        const VISIBLE_BANDS: usize,
-        const PRESET_BANDS: usize,
-        const MIN_VOLUME: i16,
-        const MAX_VOLUME: i16,
-        const FRACTION_DIGITS: u8,
-    >(
-        &mut self,
-        settings: modules::equalizer::EqualizerModuleSettings<
-            VISIBLE_BANDS,
-            PRESET_BANDS,
-            MIN_VOLUME,
-            MAX_VOLUME,
-            FRACTION_DIGITS,
-        >,
-    ) where
-        StateType: Has<EqualizerConfiguration<CHANNELS, BANDS, MIN_VOLUME, MAX_VOLUME, FRACTION_DIGITS>>
-            + Has<TwsStatus>
-            + Has<BasicHearId<CHANNELS, BANDS>>
-            + Has<Gender>
-            + Has<AgeRange>,
-    {
-        self.module_collection
-            .add_equalizer_with_basic_hear_id_tws(
-                self.packet_io_controller.clone(),
-                self.database.clone(),
-                self.device_model,
-                self.change_notify.clone(),
-                settings,
-            )
-            .await;
-    }
-
-    pub async fn equalizer_with_custom_hear_id_tws<
-        const CHANNELS: usize,
-        const BANDS: usize,
-        const VISIBLE_BANDS: usize,
-        const PRESET_BANDS: usize,
-        const MIN_VOLUME: i16,
-        const MAX_VOLUME: i16,
-        const FRACTION_DIGITS: u8,
-    >(
-        &mut self,
-        settings: modules::equalizer::EqualizerModuleSettings<
-            VISIBLE_BANDS,
-            PRESET_BANDS,
-            MIN_VOLUME,
-            MAX_VOLUME,
-            FRACTION_DIGITS,
-        >,
-    ) where
-        StateType: Has<EqualizerConfiguration<CHANNELS, BANDS, MIN_VOLUME, MAX_VOLUME, FRACTION_DIGITS>>
-            + Has<TwsStatus>
-            + Has<CustomHearId<CHANNELS, BANDS>>
-            + Has<Gender>
-            + Has<AgeRange>,
-    {
-        self.module_collection
-            .add_equalizer_with_custom_hear_id_tws(
-                self.packet_io_controller.clone(),
-                self.database.clone(),
-                self.device_model,
-                self.change_notify.clone(),
-                settings,
-            )
-            .await;
-    }
-
-    pub async fn equalizer_with_custom_hear_id_tws_force_supports_hear_id<
-        const CHANNELS: usize,
-        const BANDS: usize,
-        const VISIBLE_BANDS: usize,
-        const PRESET_BANDS: usize,
-        const MIN_VOLUME: i16,
-        const MAX_VOLUME: i16,
-        const FRACTION_DIGITS: u8,
-    >(
-        &mut self,
-        settings: modules::equalizer::EqualizerModuleSettings<
-            VISIBLE_BANDS,
-            PRESET_BANDS,
-            MIN_VOLUME,
-            MAX_VOLUME,
-            FRACTION_DIGITS,
-        >,
-    ) where
-        StateType: Has<EqualizerConfiguration<CHANNELS, BANDS, MIN_VOLUME, MAX_VOLUME, FRACTION_DIGITS>>
-            + Has<TwsStatus>
-            + Has<CustomHearId<CHANNELS, BANDS>>
-            + Has<Gender>
-            + Has<AgeRange>,
-    {
-        self.module_collection
-            .add_equalizer_with_custom_hear_id_tws_force_supports_hear_id(
-                self.packet_io_controller.clone(),
-                self.database.clone(),
-                self.device_model,
-                self.change_notify.clone(),
-                settings,
-            )
-            .await;
-    }
-
     pub fn button_configuration<const NUM_BUTTONS: usize, const NUM_PRESS_KINDS: usize>(
         &mut self,
         settings: &'static ButtonConfigurationSettings<NUM_BUTTONS, NUM_PRESS_KINDS>,
@@ -528,15 +283,6 @@ where
             .add_ambient_sound_mode_cycle(self.packet_io_controller.clone());
     }
 
-    pub fn ambient_sound_mode_cycle_tws(&mut self)
-    where
-        StateType:
-            Has<TwsStatus> + Has<AmbientSoundModeCycleTws> + Has<ResetButtonConfigurationPending>,
-    {
-        self.module_collection
-            .add_ambient_sound_mode_cycle_tws(self.packet_io_controller.clone());
-    }
-
     pub fn reset_button_configuration<ButtonConfigurationPacketType>(
         &mut self,
         request_button_configuration_packet: packet::Outbound,
@@ -551,34 +297,6 @@ where
             );
     }
 
-    pub fn single_battery(&mut self, max_level: u8)
-    where
-        StateType: Has<SingleBattery>,
-    {
-        self.module_collection.add_single_battery(
-            modules::single_battery::SingleBatteryConfiguration {
-                max_level,
-                ..Default::default()
-            },
-        );
-    }
-
-    pub fn single_battery_custom(
-        &mut self,
-        configuration: modules::single_battery::SingleBatteryConfiguration,
-    ) where
-        StateType: Has<SingleBattery>,
-    {
-        self.module_collection.add_single_battery(configuration);
-    }
-
-    pub fn single_battery_level(&mut self, max_level: u8)
-    where
-        StateType: Has<BatteryLevel>,
-    {
-        self.module_collection.add_single_battery_level(max_level);
-    }
-
     pub fn dual_battery(&mut self, max_level: u8)
     where
         StateType: Has<DualBattery>,
@@ -588,53 +306,6 @@ where
                 max_level,
                 ..Default::default()
             });
-    }
-
-    pub fn dual_battery_custom(
-        &mut self,
-        configuration: modules::dual_battery::DualBatteryConfiguration,
-    ) where
-        StateType: Has<DualBattery>,
-    {
-        self.module_collection.add_dual_battery(configuration);
-    }
-
-    pub fn dual_battery_level_custom(
-        &mut self,
-        configuration: modules::dual_battery_level::DualBatteryLevelConfiguration,
-    ) where
-        StateType: Has<DualBatteryLevel>,
-    {
-        self.module_collection.add_dual_battery_level(configuration);
-    }
-
-    pub fn case_battery_level(&mut self, max_level: u8)
-    where
-        StateType: Has<CaseBatteryLevel>,
-    {
-        self.module_collection.add_case_battery_level(
-            modules::case_battery_level::CaseBatteryLevelConfiguration {
-                max_level,
-                ..Default::default()
-            },
-        );
-    }
-
-    pub fn case_battery_level_custom(
-        &mut self,
-        configuration: modules::case_battery_level::CaseBatteryLevelConfiguration,
-    ) where
-        StateType: Has<CaseBatteryLevel>,
-    {
-        self.module_collection.add_case_battery_level(configuration);
-    }
-
-    pub fn serial_number_and_firmware_version(&mut self)
-    where
-        StateType: Has<SerialNumber> + Has<FirmwareVersion>,
-    {
-        self.module_collection
-            .add_serial_number_and_firmware_version();
     }
 
     pub fn serial_number_and_dual_firmware_version(&mut self)
@@ -662,14 +333,6 @@ where
             .add_auto_power_off(self.packet_io_controller.clone(), durations);
     }
 
-    pub fn limit_high_volume(&mut self)
-    where
-        StateType: Has<LimitHighVolume>,
-    {
-        self.module_collection
-            .add_limit_high_volume(self.packet_io_controller.clone());
-    }
-
     pub fn dual_connections(&mut self)
     where
         StateType: Has<DualConnections>,
@@ -680,16 +343,7 @@ where
 
     flag!(TouchTone);
     flag!(GamingMode);
-    flag!(SoundLeakCompensation);
-    flag!(SurroundSound);
-    flag!(AutoPlayPause);
-    flag!(WearingTone);
-    flag!(TouchLock);
     flag!(LowBatteryPrompt);
-    flag!(WearingDetection);
-    flag!(VoicePrompt);
-    flag!(Ldac);
-    flag!(DisableAllButtons);
 }
 
 pub struct SoundcoreDeviceTemplate<StateType>

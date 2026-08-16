@@ -222,6 +222,8 @@ impl Command {
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum ChecksumKind {
+    /// Checksum-disabled mode, only exercised by tests since A3959 always uses a suffix checksum.
+    #[allow(dead_code)]
     None,
     #[default]
     Suffix,

@@ -232,7 +232,11 @@ impl ButtonPressKind {
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum EnabledFlagKind {
     None,
+    // Single-earbud modes are matched during packet parsing but never constructed now that
+    // only the TWS R50i NC (A3959) is supported.
+    #[allow(dead_code)]
     Single,
+    #[allow(dead_code)]
     TwsLowBits,
 }
 
@@ -322,6 +326,9 @@ impl EnabledStatus {
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum ActionKind {
+    // Single-earbud mode is matched during packet parsing but never constructed now that only
+    // the TWS R50i NC (A3959) is supported.
+    #[allow(dead_code)]
     Single,
     TwsLowBits,
 }

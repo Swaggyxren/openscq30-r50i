@@ -12,29 +12,6 @@ use crate::devices::soundcore::common::{
 use super::FromPacketBody;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct SingleBatteryLevel {
-    pub level: BatteryLevel,
-}
-
-impl SingleBatteryLevel {
-    pub const COMMAND: Command = Command([0x01, 0x03]);
-}
-
-impl FromPacketBody for SingleBatteryLevel {
-    type DirectionMarker = packet::InboundMarker;
-
-    fn take<'a, E: ParseError<&'a [u8]> + ContextError<&'a [u8]>>(
-        input: &'a [u8],
-    ) -> IResult<&'a [u8], Self, E> {
-        context(
-            "SingleBatteryLevelUpdatePacket",
-            all_consuming(map(BatteryLevel::take, |level| Self { level })),
-        )
-        .parse_complete(input)
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct DualBatteryLevel {
     pub left: BatteryLevel,
     pub right: BatteryLevel,
@@ -99,17 +76,5 @@ mod tests {
             .1;
         assert_eq!(BatteryLevel(4), packet.left);
         assert_eq!(BatteryLevel(5), packet.right);
-    }
-
-    #[test]
-    fn it_parses_an_actual_packet_from_q30() {
-        let input: &[u8] = &[
-            0x09, 0xff, 0x00, 0x00, 0x01, 0x01, 0x03, 0x0b, 0x00, 0x02, 0x1a,
-        ];
-        let (_, packet) = packet::Inbound::take_with_checksum::<VerboseError<_>>(input).unwrap();
-        let packet = SingleBatteryLevel::take::<VerboseError<_>>(&packet.body)
-            .unwrap()
-            .1;
-        assert_eq!(BatteryLevel(2), packet.level);
     }
 }

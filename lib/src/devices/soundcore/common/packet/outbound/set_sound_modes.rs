@@ -2,6 +2,8 @@ use crate::devices::soundcore::common::{packet, structures::SoundModes};
 
 use super::outbound_packet::ToPacket;
 
+// Only used by the packet_io_controller tests as a generic Default-derivable request packet.
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct SetSoundModes(pub SoundModes);
 

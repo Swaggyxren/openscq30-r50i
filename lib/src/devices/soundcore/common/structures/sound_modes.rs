@@ -1,59 +1,13 @@
-use nom::{
-    IResult, Parser,
-    combinator::map,
-    error::{ContextError, ParseError, context},
-    number::complete::le_u8,
-};
-
 use crate::devices::soundcore::common::macros::sound_mode_enum;
 
+// Only used by the SetSoundModes packet in packet_io_controller tests; A3959 uses sound_modes_v2.
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, Default)]
 pub struct SoundModes {
     pub ambient_sound_mode: AmbientSoundMode,
     pub noise_canceling_mode: NoiseCancelingMode,
     pub transparency_mode: TransparencyMode,
     pub custom_noise_canceling: CustomNoiseCanceling,
-}
-
-impl SoundModes {
-    pub fn take<'a, E: ParseError<&'a [u8]> + ContextError<&'a [u8]>>(
-        input: &'a [u8],
-    ) -> IResult<&'a [u8], Self, E> {
-        context(
-            "group of sound modes",
-            map(
-                (
-                    AmbientSoundMode::take,
-                    NoiseCancelingMode::take,
-                    TransparencyMode::take,
-                    CustomNoiseCanceling::take,
-                ),
-                |(
-                    ambient_sound_mode,
-                    noise_canceling_mode,
-                    transparency_mode,
-                    custom_noise_canceling,
-                )| {
-                    Self {
-                        ambient_sound_mode,
-                        noise_canceling_mode,
-                        transparency_mode,
-                        custom_noise_canceling,
-                    }
-                },
-            ),
-        )
-        .parse_complete(input)
-    }
-
-    pub fn bytes(&self) -> [u8; 4] {
-        [
-            self.ambient_sound_mode.byte(),
-            self.noise_canceling_mode.byte(),
-            self.transparency_mode.byte(),
-            self.custom_noise_canceling.value(),
-        ]
-    }
 }
 
 sound_mode_enum!(
@@ -80,11 +34,14 @@ sound_mode_enum!(
     }
 );
 
+// Only used by the SetSoundModes packet in packet_io_controller tests.
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, Default, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct CustomNoiseCanceling {
     value: u8,
 }
 
+#[allow(dead_code)]
 impl CustomNoiseCanceling {
     pub fn new(value: u8) -> Self {
         // Not sure what 255 means here, but it is allowed in addition to 0-10
@@ -100,17 +57,5 @@ impl CustomNoiseCanceling {
 
     pub fn value(&self) -> u8 {
         self.value
-    }
-
-    pub fn take<'a, E: ParseError<&'a [u8]> + ContextError<&'a [u8]>>(
-        input: &'a [u8],
-    ) -> IResult<&'a [u8], Self, E> {
-        context(
-            "custom noise canceling",
-            map(le_u8, |custom_noise_canceling_level| {
-                Self::new(custom_noise_canceling_level)
-            }),
-        )
-        .parse_complete(input)
     }
 }

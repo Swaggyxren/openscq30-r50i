@@ -7,21 +7,6 @@ use nom::{
 use strum::Display;
 
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Default)]
-pub struct CaseBatteryLevel(pub BatteryLevel);
-
-impl CaseBatteryLevel {
-    pub fn take<'a, E: ParseError<&'a [u8]> + ContextError<&'a [u8]>>(
-        input: &'a [u8],
-    ) -> IResult<&'a [u8], Self, E> {
-        map(BatteryLevel::take, Self).parse_complete(input)
-    }
-
-    pub fn bytes(&self) -> [u8; 1] {
-        [self.0.0]
-    }
-}
-
-#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub struct DualBattery {
     pub left: SingleBattery,
     pub right: SingleBattery,
@@ -66,52 +51,9 @@ impl DualBattery {
 }
 
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Default)]
-pub struct DualBatteryLevel {
-    pub left: BatteryLevel,
-    pub right: BatteryLevel,
-}
-
-impl DualBatteryLevel {
-    pub fn bytes(&self) -> [u8; 2] {
-        [self.left.0, self.right.0]
-    }
-
-    pub fn take<'a, E: ParseError<&'a [u8]> + ContextError<&'a [u8]>>(
-        input: &'a [u8],
-    ) -> IResult<&'a [u8], Self, E> {
-        context(
-            "dual battery level",
-            map((BatteryLevel::take, BatteryLevel::take), |(left, right)| {
-                Self { left, right }
-            }),
-        )
-        .parse_complete(input)
-    }
-}
-
-#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub struct SingleBattery {
     pub is_charging: IsBatteryCharging,
     pub level: BatteryLevel,
-}
-
-impl SingleBattery {
-    pub fn take<'a, E: ParseError<&'a [u8]> + ContextError<&'a [u8]>>(
-        input: &'a [u8],
-    ) -> IResult<&'a [u8], Self, E> {
-        context(
-            "battery",
-            map(
-                (BatteryLevel::take, IsBatteryCharging::take),
-                |(level, is_charging)| Self { level, is_charging },
-            ),
-        )
-        .parse_complete(input)
-    }
-
-    pub fn bytes(&self) -> [u8; 2] {
-        [self.level.0, self.is_charging as u8]
-    }
 }
 
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Default, Display)]

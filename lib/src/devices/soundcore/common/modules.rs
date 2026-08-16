@@ -20,22 +20,14 @@ use super::{
 };
 
 pub mod ambient_sound_mode_cycle;
-mod ambient_sound_mode_cycle_tws;
 pub mod auto_power_off;
 pub mod button_configuration;
-pub mod case_battery_level;
 pub mod dual_battery;
-pub mod dual_battery_level;
 pub mod dual_connections;
 pub mod equalizer;
 pub mod flag;
-pub mod limit_high_volume;
 pub mod reset_button_configuration;
 pub mod serial_number_and_dual_firmware_version;
-pub mod serial_number_and_firmware_version;
-pub mod single_battery;
-pub mod single_battery_level;
-pub mod sound_modes;
 pub mod sound_modes_v2;
 pub mod tws_status;
 

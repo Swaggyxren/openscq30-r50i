@@ -101,54 +101,8 @@ pub struct ButtonAction {
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum ButtonDisableMode {
     NotDisablable,
-    DisablingOneSideDisablesOther,
     IndividualDisable,
 }
-
-pub const COMMON_SETTINGS: ButtonConfigurationSettings<6, 3> = ButtonConfigurationSettings {
-    supports_set_all_packet: true,
-    ignore_enabled_flag: false,
-    order: [
-        Button::LeftDoublePress,
-        Button::LeftLongPress,
-        Button::RightDoublePress,
-        Button::RightLongPress,
-        Button::LeftSinglePress,
-        Button::RightSinglePress,
-    ],
-    settings: [
-        ButtonSettings {
-            parse_settings: ButtonParseSettings {
-                enabled_flag_kind: EnabledFlagKind::Single,
-                action_kind: ActionKind::TwsLowBits,
-            },
-            button_id: 0,
-            press_kind: ButtonPressKind::Double,
-            available_actions: COMMON_ACTIONS,
-            disable_mode: ButtonDisableMode::NotDisablable,
-        },
-        ButtonSettings {
-            parse_settings: ButtonParseSettings {
-                enabled_flag_kind: EnabledFlagKind::Single,
-                action_kind: ActionKind::TwsLowBits,
-            },
-            button_id: 1,
-            press_kind: ButtonPressKind::Long,
-            available_actions: COMMON_ACTIONS,
-            disable_mode: ButtonDisableMode::NotDisablable,
-        },
-        ButtonSettings {
-            parse_settings: ButtonParseSettings {
-                enabled_flag_kind: EnabledFlagKind::Single,
-                action_kind: ActionKind::Single,
-            },
-            button_id: 2,
-            press_kind: ButtonPressKind::Single,
-            available_actions: COMMON_ACTIONS,
-            disable_mode: ButtonDisableMode::DisablingOneSideDisablesOther,
-        },
-    ],
-};
 
 /// The official app only displays these actions for button single presses. From my testing,
 /// this doesn't seem to be a limitation of the device, just the app. If a device is discovered
@@ -184,39 +138,6 @@ pub const COMMON_ACTIONS_MINIMAL: &[ButtonAction] = &[
 
 // Everything except gaming mode
 pub const COMMON_ACTIONS: &[ButtonAction] = COMMON_ACTIONS_WITH_GAME_MODE.split_at(7).0;
-
-pub const COMMON_ACTIONS_WITHOUT_SOUND_MODES: &[ButtonAction] = &[
-    ButtonAction {
-        id: 0,
-        name: "VolumeUp",
-        localized_name: || fl!("volume-up"),
-    },
-    ButtonAction {
-        id: 1,
-        name: "VolumeDown",
-        localized_name: || fl!("volume-down"),
-    },
-    ButtonAction {
-        id: 2,
-        name: "PreviousSong",
-        localized_name: || fl!("previous-song"),
-    },
-    ButtonAction {
-        id: 3,
-        name: "NextSong",
-        localized_name: || fl!("next-song"),
-    },
-    ButtonAction {
-        id: 5,
-        name: "VoiceAssistant",
-        localized_name: || fl!("voice-assistant"),
-    },
-    ButtonAction {
-        id: 6,
-        name: "PlayPause",
-        localized_name: || fl!("play-pause"),
-    },
-];
 
 pub const COMMON_ACTIONS_WITH_GAME_MODE: &[ButtonAction] = &[
     ButtonAction {

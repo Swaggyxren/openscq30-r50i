@@ -40,17 +40,6 @@ macro_rules! flag {
         }
     };
 }
-pub(crate) use flag;
-
 flag!(TouchTone);
 flag!(GamingMode);
-flag!(SoundLeakCompensation);
-flag!(SurroundSound);
-flag!(AutoPlayPause);
-flag!(WearingTone);
-flag!(TouchLock);
 flag!(LowBatteryPrompt);
-flag!(WearingDetection);
-flag!(VoicePrompt);
-flag!(Ldac);
-flag!(DisableAllButtons);

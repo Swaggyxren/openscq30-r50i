@@ -6,6 +6,8 @@ use nom::{
 };
 use std::array;
 
+// Only used by packet tests now that A3959 uses common_settings_type_2 directly.
+#[allow(dead_code)]
 pub type CommonVolumeAdjustments<const BANDS: usize> =
     VolumeAdjustments<BANDS, -120, { (u8::MAX - 121) as i16 }, 1>;
 

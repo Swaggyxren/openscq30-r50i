@@ -278,16 +278,6 @@ impl Setting {
         }
     }
 
-    pub(crate) fn optional_select_from_enum_all_variants<T>(value: Option<T>) -> Self
-    where
-        T: PartialEq + Into<&'static str> + IntoEnumIterator + Translate,
-    {
-        Self::OptionalSelect {
-            setting: Select::from_enum(T::iter()),
-            value: value.map(|v| Cow::Borrowed(v.into())),
-        }
-    }
-
     pub(crate) fn select_from_enum<T>(variants: &[T], value: T) -> Self
     where
         for<'a> &'a T: PartialEq + Into<&'static str>,

@@ -180,36 +180,6 @@ impl<const NUM_BUTTONS: usize, const NUM_PRESS_KINDS: usize>
             ButtonDisableMode::IndividualDisable => {
                 *status = status.with_current_action_id(tws_status, maybe_action_id);
             }
-            ButtonDisableMode::DisablingOneSideDisablesOther => {
-                *status = status.with_current_action_id(tws_status, maybe_action_id);
-                let other_side_pos = self
-                    .settings
-                    .order
-                    .iter()
-                    .position(|b| {
-                        b.press_kind() == button.press_kind() && b.side() != button.side()
-                    })
-                    .expect("both sides should be listed");
-
-                if !statuses.0[other_side_pos].is_enabled(tws_status) {
-                    if let Some(action) = maybe_action {
-                        let current_action_id =
-                            statuses.0[other_side_pos].action.current(tws_status);
-                        statuses.0[other_side_pos] = statuses.0[other_side_pos]
-                            .with_current_action_id(
-                                tws_status,
-                                Some(if current_action_id != 0xF {
-                                    current_action_id
-                                } else {
-                                    action.id
-                                }),
-                            );
-                    }
-                } else if maybe_action.is_none() {
-                    statuses.0[other_side_pos] =
-                        statuses.0[other_side_pos].with_current_action_id(tws_status, None);
-                }
-            }
         }
 
         Ok(())
