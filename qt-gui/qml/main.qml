@@ -45,6 +45,17 @@ KC.ApplicationWindow {
             return idx === 0 ? "" : s.options[idx - 1]
         return s.options[idx]
     }
+    function batteryPercent(value) {
+        if (!value)
+            return "—"
+        var parts = String(value).split("/")
+        if (parts.length !== 2)
+            return value
+        var n = parseInt(parts[0]), d = parseInt(parts[1])
+        if (isNaN(n) || isNaN(d) || d === 0)
+            return value
+        return Math.round(n / d * 100) + "%"
+    }
 
     globalDrawer: KC.GlobalDrawer {
         title: "OpenSCQ30"
@@ -78,13 +89,16 @@ KC.ApplicationWindow {
     pageStack.initialPage: devicePage
 
     // ---- One setting row (declared before the pages that use it) ----
-    component SettingDelegate: Column {
-        required property var setting
+    Component {
+        id: settingDelegate
+        Column {
+            property var setting: modelData
+            Layout.fillWidth: true
 
-        // Label + inline control
-        RowLayout {
-            width: parent.width
-            spacing: Platform.Units.largeSpacing
+            // Label + inline control
+            RowLayout {
+                width: parent.width
+                spacing: Platform.Units.largeSpacing
 
             QQC2.Label {
                 text: setting.label
@@ -181,6 +195,7 @@ KC.ApplicationWindow {
             color: Platform.Theme.disabledTextColor
             opacity: 0.25
         }
+        }
     }
 
     // ---- Device page (dashboard when connected, pairing when not) ----
@@ -228,13 +243,12 @@ KC.ApplicationWindow {
                                     font.bold: true
                                 }
                                 QQC2.Label {
-                                    text: Backend.batteryLeft != "" ? Backend.batteryLeft : "—"
-                                    font.pixelSize: 22
+                                    text: batteryPercent(Backend.batteryLeft)
+                                    font.pixelSize: 26
                                 }
                                 QQC2.Label {
-                                    text: Backend.chargingLeft ? "Charging" : ""
-                                    color: Platform.Theme.positiveTextColor
-                                    visible: Backend.chargingLeft
+                                    text: Backend.chargingLeft ? "Charging" : (Backend.batteryLeft !== "" ? Backend.batteryLeft : "—")
+                                    color: Platform.Theme.disabledTextColor
                                 }
                             }
                         }
@@ -247,13 +261,12 @@ KC.ApplicationWindow {
                                     font.bold: true
                                 }
                                 QQC2.Label {
-                                    text: Backend.batteryRight != "" ? Backend.batteryRight : "—"
-                                    font.pixelSize: 22
+                                    text: batteryPercent(Backend.batteryRight)
+                                    font.pixelSize: 26
                                 }
                                 QQC2.Label {
-                                    text: Backend.chargingRight ? "Charging" : ""
-                                    color: Platform.Theme.positiveTextColor
-                                    visible: Backend.chargingRight
+                                    text: Backend.chargingRight ? "Charging" : (Backend.batteryRight !== "" ? Backend.batteryRight : "—")
+                                    color: Platform.Theme.disabledTextColor
                                 }
                             }
                         }
@@ -416,10 +429,7 @@ KC.ApplicationWindow {
 
                 Repeater {
                     model: Backend.settings
-                    delegate: SettingDelegate {
-                        setting: modelData
-                        width: parent.width
-                    }
+                    delegate: settingDelegate
                 }
             }
         }

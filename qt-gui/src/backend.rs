@@ -165,6 +165,7 @@ impl Backend {
         self.deviceName = DEVICE_NAME.to_string();
         self.deviceNameChanged();
         self.set_state("connected");
+        self.set_status("Connected");
         self.set_busy(false);
         self.tray
             .update(|tray| tray.set_device(Some(device.clone())));
