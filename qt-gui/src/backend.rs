@@ -91,7 +91,7 @@ impl Backend {
         runtime: tokio::runtime::Handle,
         tray: TrayHandle,
     ) -> Self {
-        Backend {
+        Self {
             base: Default::default(),
             runtime,
             session,
@@ -290,7 +290,7 @@ impl Backend {
 
     fn spawn_watchers(&self, device: Arc<dyn OpenSCQ30Device + Send + Sync>) {
         let runtime = self.runtime.clone();
-        let qptr = QPointer::from(&*self);
+        let qptr = QPointer::from(self);
         let disc_qptr = qptr.clone();
 
         // Settings changes -> refresh the QML-facing snapshot.
@@ -576,6 +576,14 @@ impl Backend {
         self.set_select("ambientSoundMode".to_string(), mode);
     }
 
+    fn set_equalizer_preset(&mut self, preset: String) {
+        let Some(device) = self.current_device.clone() else {
+            return;
+        };
+        let value = Value::OptionalString(Some(Cow::Owned(preset)));
+        self.send_setting(device, vec![(SettingId::PresetEqualizerProfile, value)]);
+    }
+
     fn quit(&mut self) {
         qmetaobject::qtcore::core_application::QCoreApplication::quit();
     }
@@ -584,6 +592,7 @@ impl Backend {
     pub fn handle_tray_command(&mut self, command: TrayCommand) {
         match command {
             TrayCommand::SetAmbientSoundMode(mode) => self.set_anc_mode(mode),
+            TrayCommand::SetEqualizerPreset(preset) => self.set_equalizer_preset(preset),
             TrayCommand::OpenSettings => self.open_requested(),
             TrayCommand::Quit => {
                 qmetaobject::qtcore::core_application::QCoreApplication::quit();

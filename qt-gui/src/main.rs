@@ -48,6 +48,9 @@ fn main() {
         .expect("database is required to run");
     let session = Arc::new(session);
 
+    // Make the app icon resolvable by name (taskbar / launcher / tooltips).
+    install_app_icon();
+
     // System tray (StatusNotifierItem) on its own thread.
     let (tray_command_tx, tray_command_rx) = tokio::sync::mpsc::unbounded_channel::<TrayCommand>();
     let tray = tray::spawn(tray_command_tx);
@@ -76,4 +79,26 @@ fn main() {
 
     engine.load_data(include_str!("../qml/main.qml").into());
     engine.exec();
+}
+
+/// Writes the app SVG into the user's icon theme so `icon_name` resolves.
+fn install_app_icon() {
+    let Some(data_dir) = dirs::data_dir() else {
+        return;
+    };
+    let path = data_dir.join("icons/hicolor/scalable/apps/com.oppzippy.OpenSCQ30.svg");
+    let svg = include_str!("../resources/com.oppzippy.OpenSCQ30.svg");
+    if std::fs::read_to_string(&path).is_ok_and(|existing| existing == svg) {
+        return;
+    }
+    let Some(parent) = path.parent() else {
+        return;
+    };
+    if let Err(err) = std::fs::create_dir_all(parent) {
+        tracing::debug!("failed to create icon directory {parent:?}: {err}");
+        return;
+    }
+    if let Err(err) = std::fs::write(&path, svg) {
+        tracing::debug!("failed to install app icon to {path:?}: {err}");
+    }
 }

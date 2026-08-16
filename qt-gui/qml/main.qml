@@ -412,8 +412,11 @@ KC.ApplicationWindow {
             }
         }
 
-        QQC2.Separator {
+        Rectangle {
             width: parent.width
+            height: 1
+            color: Platform.Theme.disabledTextColor
+            opacity: 0.25
         }
     }
 }
