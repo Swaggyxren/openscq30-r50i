@@ -18,7 +18,6 @@ tokio = { workspace = true, features = ["fs"] }
 futures = { workspace = true }
 libcosmic = { workspace = true, features = [
     "a11y",
-    "dbus-config",
     "tokio",
     "winit",
     "wgpu",
