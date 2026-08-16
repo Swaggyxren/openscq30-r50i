@@ -22,6 +22,11 @@ pub enum TrayCommand {
 /// The ANC modes supported by the R50i NC, in the order they appear in the tray radio group.
 const ANC_MODES: [&str; 3] = ["Normal", "Transparency", "NoiseCanceling"];
 const ANC_LABELS: [&str; 3] = ["Normal", "Transparency", "Noise Cancelling"];
+const ANC_ICONS: [&str; 3] = [
+    "audio-volume-medium-symbolic",
+    "audio-volume-low-symbolic",
+    "audio-volume-muted-symbolic",
+];
 
 /// Pre-rendered ARGB32 copies of the app icon (see `resources/tray-*.argb`).
 const ICON_24: &[u8] = include_bytes!("../resources/tray-24.argb");
@@ -69,22 +74,36 @@ fn information_value(
     }
 }
 
-/// Turns a "5/10"-style battery value into "50%" (or returns the raw text when it isn't a fraction).
-fn battery_percentage(
+/// Turns a "5/10"-style battery value into a percentage number and a "50%" label.
+fn battery_info(
     device: &(dyn OpenSCQ30Device + Send + Sync),
     setting_id: &SettingId,
-) -> Option<String> {
+) -> Option<(u8, String)> {
     let value = information_value(device, setting_id)?;
     let Some((num, den)) = value.split_once('/') else {
-        return Some(value);
+        return Some((0, value));
     };
     let (Ok(num), Ok(den)) = (num.trim().parse::<f64>(), den.trim().parse::<f64>()) else {
-        return Some(value);
+        return Some((0, value));
     };
     if den <= 0.0 {
-        return Some(value);
+        return Some((0, value));
     }
-    Some(format!("{:.0}%", num / den * 100.0))
+    let pct = (num / den * 100.0).round() as u8;
+    Some((pct, format!("{pct}%")))
+}
+
+/// Picks a battery icon that matches the charge level.
+fn battery_icon(pct: u8) -> &'static str {
+    if pct >= 90 {
+        "battery-full-symbolic"
+    } else if pct >= 50 {
+        "battery-good-symbolic"
+    } else if pct >= 20 {
+        "battery-low-symbolic"
+    } else {
+        "battery-caution-symbolic"
+    }
 }
 
 /// Returns `(raw_options, display_labels, selected_index)` for the equalizer preset selector.
@@ -151,11 +170,13 @@ impl Tray for TrayModel {
             description: self.device.as_ref().map_or_else(
                 || "Not connected".to_string(),
                 |device| {
-                    let left = battery_percentage(device.as_ref(), &SettingId::BatteryLevelLeft);
-                    let right = battery_percentage(device.as_ref(), &SettingId::BatteryLevelRight);
+                    let left = battery_info(device.as_ref(), &SettingId::BatteryLevelLeft);
+                    let right = battery_info(device.as_ref(), &SettingId::BatteryLevelRight);
                     match (left, right) {
-                        (Some(left), Some(right)) => format!("Left {left} · Right {right}"),
-                        (Some(value), None) | (None, Some(value)) => {
+                        (Some((_, left)), Some((_, right))) => {
+                            format!("Left {left} · Right {right}")
+                        }
+                        (Some((_, value)), None) | (None, Some((_, value))) => {
                             format!("Battery {value}")
                         }
                         (None, None) => "Not connected".to_string(),
@@ -183,21 +204,23 @@ impl Tray for TrayModel {
         };
 
         // Battery levels, shown separately per earbud.
-        let left = battery_percentage(device.as_ref(), &SettingId::BatteryLevelLeft);
-        let right = battery_percentage(device.as_ref(), &SettingId::BatteryLevelRight);
-        if let Some(left) = left {
+        let left = battery_info(device.as_ref(), &SettingId::BatteryLevelLeft);
+        let right = battery_info(device.as_ref(), &SettingId::BatteryLevelRight);
+        if let Some((pct, label)) = left {
             items.push(MenuItem::Standard(StandardItem {
-                label: format!("Left battery: {left}"),
-                enabled: false,
-                disposition: Disposition::Informative,
+                label: format!("Left: {label}"),
+                icon_name: battery_icon(pct).to_string(),
+                disposition: Disposition::Normal,
+                activate: Box::new(|_| {}),
                 ..Default::default()
             }));
         }
-        if let Some(right) = right {
+        if let Some((pct, label)) = right {
             items.push(MenuItem::Standard(StandardItem {
-                label: format!("Right battery: {right}"),
-                enabled: false,
-                disposition: Disposition::Informative,
+                label: format!("Right: {label}"),
+                icon_name: battery_icon(pct).to_string(),
+                disposition: Disposition::Normal,
+                activate: Box::new(|_| {}),
                 ..Default::default()
             }));
         }
@@ -221,8 +244,10 @@ impl Tray for TrayModel {
             }),
             options: ANC_LABELS
                 .iter()
-                .map(|label| RadioItem {
+                .enumerate()
+                .map(|(index, label)| RadioItem {
                     label: (*label).to_string(),
+                    icon_name: ANC_ICONS[index].to_string(),
                     ..Default::default()
                 })
                 .collect(),

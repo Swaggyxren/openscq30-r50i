@@ -56,6 +56,17 @@ KC.ApplicationWindow {
             return value
         return Math.round(n / d * 100) + "%"
     }
+    function batteryColor(value) {
+        var p = batteryPercent(value)
+        if (p === "—")
+            return Platform.Theme.disabledTextColor
+        var n = parseInt(p)
+        if (n >= 50)
+            return Platform.Theme.positiveTextColor
+        if (n >= 20)
+            return Platform.Theme.neutralTextColor
+        return Platform.Theme.negativeTextColor
+    }
 
     globalDrawer: KC.GlobalDrawer {
         title: "OpenSCQ30"
@@ -215,15 +226,48 @@ KC.ApplicationWindow {
                     spacing: Platform.Units.largeSpacing
                     visible: Backend.state == "connected"
 
-                    KC.Heading {
-                        text: Backend.deviceName
-                        level: 1
+                    // Hero: icon badge + device name + status
+                    RowLayout {
                         Layout.fillWidth: true
-                    }
-                    QQC2.Label {
-                        text: Backend.statusMessage
-                        color: Platform.Theme.disabledTextColor
-                        visible: Backend.statusMessage != ""
+                        spacing: Platform.Units.largeSpacing
+
+                        Rectangle {
+                            width: 56
+                            height: 56
+                            radius: 28
+                            color: Platform.Theme.highlightColor
+
+                            QQC2.Label {
+                                anchors.centerIn: parent
+                                text: "♫"
+                                color: Platform.Theme.highlightedTextColor
+                                font.pixelSize: 26
+                            }
+                        }
+
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: Platform.Units.smallSpacing
+
+                            KC.Heading {
+                                text: Backend.deviceName
+                                level: 1
+                            }
+                            RowLayout {
+                                spacing: Platform.Units.smallSpacing
+
+                                Rectangle {
+                                    width: 9
+                                    height: 9
+                                    radius: 4.5
+                                    color: Backend.state == "connected" ? Platform.Theme.positiveTextColor : Platform.Theme.disabledTextColor
+                                }
+                                QQC2.Label {
+                                    text: Backend.statusMessage
+                                    color: Platform.Theme.disabledTextColor
+                                }
+                            }
+                        }
                     }
 
                     // Battery
@@ -238,17 +282,22 @@ KC.ApplicationWindow {
                         QQC2.Frame {
                             Layout.fillWidth: true
                             ColumnLayout {
+                                spacing: Platform.Units.smallSpacing
+
                                 QQC2.Label {
                                     text: "Left"
                                     font.bold: true
+                                    color: Platform.Theme.disabledTextColor
                                 }
                                 QQC2.Label {
                                     text: batteryPercent(Backend.batteryLeft)
-                                    font.pixelSize: 26
+                                    font.pixelSize: 28
+                                    font.bold: true
+                                    color: batteryColor(Backend.batteryLeft)
                                 }
                                 QQC2.Label {
-                                    text: Backend.chargingLeft ? "Charging" : (Backend.batteryLeft !== "" ? Backend.batteryLeft : "—")
-                                    color: Platform.Theme.disabledTextColor
+                                    text: Backend.chargingLeft ? "⚡ Charging" : "Battery"
+                                    color: Backend.chargingLeft ? Platform.Theme.positiveTextColor : Platform.Theme.disabledTextColor
                                 }
                             }
                         }
@@ -256,17 +305,22 @@ KC.ApplicationWindow {
                         QQC2.Frame {
                             Layout.fillWidth: true
                             ColumnLayout {
+                                spacing: Platform.Units.smallSpacing
+
                                 QQC2.Label {
                                     text: "Right"
                                     font.bold: true
+                                    color: Platform.Theme.disabledTextColor
                                 }
                                 QQC2.Label {
                                     text: batteryPercent(Backend.batteryRight)
-                                    font.pixelSize: 26
+                                    font.pixelSize: 28
+                                    font.bold: true
+                                    color: batteryColor(Backend.batteryRight)
                                 }
                                 QQC2.Label {
-                                    text: Backend.chargingRight ? "Charging" : (Backend.batteryRight !== "" ? Backend.batteryRight : "—")
-                                    color: Platform.Theme.disabledTextColor
+                                    text: Backend.chargingRight ? "⚡ Charging" : "Battery"
+                                    color: Backend.chargingRight ? Platform.Theme.positiveTextColor : Platform.Theme.disabledTextColor
                                 }
                             }
                         }
@@ -286,6 +340,7 @@ KC.ApplicationWindow {
 
                         QQC2.Button {
                             text: "Normal"
+                            icon.name: "audio-volume-medium"
                             checkable: true
                             checked: Backend.ancMode == "Normal"
                             QQC2.ButtonGroup.group: ancGroup
@@ -293,6 +348,7 @@ KC.ApplicationWindow {
                         }
                         QQC2.Button {
                             text: "Transparency"
+                            icon.name: "audio-volume-low"
                             checkable: true
                             checked: Backend.ancMode == "Transparency"
                             QQC2.ButtonGroup.group: ancGroup
@@ -300,6 +356,7 @@ KC.ApplicationWindow {
                         }
                         QQC2.Button {
                             text: "Noise Cancelling"
+                            icon.name: "audio-volume-muted"
                             checkable: true
                             checked: Backend.ancMode == "NoiseCanceling"
                             QQC2.ButtonGroup.group: ancGroup
