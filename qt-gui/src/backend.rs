@@ -142,6 +142,7 @@ impl Backend {
 
     fn set_state(&mut self, state: &str) {
         if self.state != state {
+            tracing::debug!(old = %self.state, new = %state, "backend state changed");
             self.state = state.to_string();
             self.stateChanged();
         }

@@ -58,13 +58,13 @@ KC.ApplicationWindow {
             KC.Action {
                 text: "Settings"
                 icon.name: "configure"
-                enabled: Backend.state === "connected"
+                enabled: Backend.state == "connected"
                 onTriggered: root.pageStack.replace(settingsPage)
             },
             KC.Action {
                 text: "Disconnect"
                 icon.name: "network-disconnect"
-                enabled: Backend.state === "connected"
+                enabled: Backend.state == "connected"
                 onTriggered: Backend.disconnect()
             },
             KC.Action {
@@ -198,7 +198,7 @@ KC.ApplicationWindow {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     spacing: Platform.Units.largeSpacing
-                    visible: Backend.state === "connected"
+                    visible: Backend.state == "connected"
 
                     KC.Heading {
                         text: Backend.deviceName
@@ -208,7 +208,7 @@ KC.ApplicationWindow {
                     QQC2.Label {
                         text: Backend.statusMessage
                         color: Platform.Theme.disabledTextColor
-                        visible: Backend.statusMessage !== ""
+                        visible: Backend.statusMessage != ""
                     }
 
                     // Battery
@@ -228,7 +228,7 @@ KC.ApplicationWindow {
                                     font.bold: true
                                 }
                                 QQC2.Label {
-                                    text: Backend.batteryLeft !== "" ? Backend.batteryLeft : "—"
+                                    text: Backend.batteryLeft != "" ? Backend.batteryLeft : "—"
                                     font.pixelSize: 22
                                 }
                                 QQC2.Label {
@@ -247,7 +247,7 @@ KC.ApplicationWindow {
                                     font.bold: true
                                 }
                                 QQC2.Label {
-                                    text: Backend.batteryRight !== "" ? Backend.batteryRight : "—"
+                                    text: Backend.batteryRight != "" ? Backend.batteryRight : "—"
                                     font.pixelSize: 22
                                 }
                                 QQC2.Label {
@@ -274,21 +274,21 @@ KC.ApplicationWindow {
                         QQC2.Button {
                             text: "Normal"
                             checkable: true
-                            checked: Backend.ancMode === "Normal"
+                            checked: Backend.ancMode == "Normal"
                             QQC2.ButtonGroup.group: ancGroup
                             onClicked: Backend.setAncMode("Normal")
                         }
                         QQC2.Button {
                             text: "Transparency"
                             checkable: true
-                            checked: Backend.ancMode === "Transparency"
+                            checked: Backend.ancMode == "Transparency"
                             QQC2.ButtonGroup.group: ancGroup
                             onClicked: Backend.setAncMode("Transparency")
                         }
                         QQC2.Button {
                             text: "Noise Cancelling"
                             checkable: true
-                            checked: Backend.ancMode === "NoiseCanceling"
+                            checked: Backend.ancMode == "NoiseCanceling"
                             QQC2.ButtonGroup.group: ancGroup
                             onClicked: Backend.setAncMode("NoiseCanceling")
                         }
@@ -302,7 +302,7 @@ KC.ApplicationWindow {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     spacing: Platform.Units.largeSpacing
-                    visible: Backend.state === "connecting"
+                    visible: Backend.state == "connecting"
                     Layout.alignment: Qt.AlignCenter
 
                     QQC2.BusyIndicator {
@@ -321,7 +321,7 @@ KC.ApplicationWindow {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     spacing: Platform.Units.largeSpacing
-                    visible: Backend.state === "disconnected"
+                    visible: Backend.state == "disconnected"
 
                     KC.Heading {
                         text: "Connect your Soundcore R50i NC"
@@ -337,7 +337,7 @@ KC.ApplicationWindow {
                     QQC2.Label {
                         text: Backend.statusMessage
                         color: Platform.Theme.disabledTextColor
-                        visible: Backend.statusMessage !== ""
+                        visible: Backend.statusMessage != ""
                         Layout.fillWidth: true
                     }
 
@@ -406,7 +406,7 @@ KC.ApplicationWindow {
                     model: Backend.categories
                     currentIndex: {
                         for (let i = 0; i < Backend.categories.length; ++i) {
-                            if (Backend.categories[i].id === Backend.currentCategory)
+                            if (Backend.categories[i].id == Backend.currentCategory)
                                 return i
                         }
                         return -1

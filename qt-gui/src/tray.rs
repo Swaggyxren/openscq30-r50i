@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use ksni::{
     Category, Handle, Icon, MenuItem, ToolTip, Tray,
-    menu::{Disposition, RadioGroup, RadioItem, StandardItem},
+    menu::{Disposition, RadioGroup, RadioItem, StandardItem, SubMenu},
 };
 use openscq30_lib::{
     device::OpenSCQ30Device,
@@ -229,24 +229,30 @@ impl Tray for TrayModel {
         }));
 
         // Equalizer preset selector (only when the device exposes one).
+        // Wrapped in a submenu so it collapses to one row instead of a long radio group.
         if let Some((raw, labels, selected)) = equalizer_presets(device.as_ref()) {
             items.push(MenuItem::Separator);
-            items.push(MenuItem::RadioGroup(RadioGroup {
-                selected,
-                select: Box::new(move |tray: &mut Self, index| {
-                    if let Some(preset) = raw.get(index) {
-                        let _ = tray
-                            .command_tx
-                            .send(TrayCommand::SetEqualizerPreset(preset.clone()));
-                    }
-                }),
-                options: labels
-                    .into_iter()
-                    .map(|label| RadioItem {
-                        label,
-                        ..Default::default()
-                    })
-                    .collect(),
+            items.push(MenuItem::SubMenu(SubMenu {
+                label: "Equalizer preset".to_string(),
+                icon_name: "view-media-equalizer".to_string(),
+                submenu: vec![MenuItem::RadioGroup(RadioGroup {
+                    selected,
+                    select: Box::new(move |tray: &mut Self, index| {
+                        if let Some(preset) = raw.get(index) {
+                            let _ = tray
+                                .command_tx
+                                .send(TrayCommand::SetEqualizerPreset(preset.clone()));
+                        }
+                    }),
+                    options: labels
+                        .into_iter()
+                        .map(|label| RadioItem {
+                            label,
+                            ..Default::default()
+                        })
+                        .collect(),
+                })],
+                ..Default::default()
             }));
         }
 
