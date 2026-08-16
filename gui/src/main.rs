@@ -70,6 +70,12 @@ fn main() -> anyhow::Result<()> {
     let tray_handle = tray::spawn(tray_command_tx);
 
     // Closing the main window hides it to the tray rather than quitting the app.
+    #[cfg(target_os = "linux")]
+    let settings = cosmic::app::Settings::default()
+        .default_font(cosmic::font::Font::with_name("Noto Sans"))
+        .theme(plasma_theme())
+        .exit_on_close(false);
+    #[cfg(not(target_os = "linux"))]
     let settings = cosmic::app::Settings::default().exit_on_close(false);
     cosmic::app::run::<app::AppModel>(
         settings,
@@ -84,6 +90,45 @@ fn main() -> anyhow::Result<()> {
     )?;
 
     Ok(())
+}
+
+/// Pick a COSMIC theme that matches Plasma's brightness. Outside COSMIC,
+/// `cosmic::theme::system_preference()` always falls back to dark, which looks
+/// foreign on a light Plasma desktop.
+#[cfg(target_os = "linux")]
+fn plasma_theme() -> cosmic::theme::Theme {
+    if plasma_prefers_dark() {
+        cosmic::theme::Theme::dark()
+    } else {
+        cosmic::theme::Theme::light()
+    }
+}
+
+/// Best-effort detection of Plasma's dark-mode preference.
+#[cfg(target_os = "linux")]
+fn plasma_prefers_dark() -> bool {
+    if let Some(config_dir) = dirs::config_dir() {
+        let kdeglobals = config_dir.join("kdeglobals");
+        if let Ok(contents) = std::fs::read_to_string(kdeglobals) {
+            for line in contents.lines() {
+                let Some((key, value)) = line.split_once('=') else {
+                    continue;
+                };
+                if key.trim() == "ColorScheme" {
+                    let scheme = value.trim().to_ascii_lowercase();
+                    if scheme.contains("light") {
+                        return false;
+                    }
+                    if scheme.contains("dark") {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+    std::env::var("GTK_THEME")
+        .map(|theme| theme.to_ascii_lowercase().contains("dark"))
+        .unwrap_or(true)
 }
 
 #[cfg(windows)]
