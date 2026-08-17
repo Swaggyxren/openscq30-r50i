@@ -125,8 +125,14 @@ pub struct Backend {
 
     // Button configuration.
     buttonActions: qt_property!(QVariantList; NOTIFY buttonConfigChanged),
-    buttonValues: qt_property!(QVariantList; NOTIFY buttonConfigChanged),
-    buttonValueIndexes: qt_property!(QVariantList; NOTIFY buttonConfigChanged),
+    leftSinglePressIndex: qt_property!(i32; NOTIFY buttonConfigChanged),
+    rightSinglePressIndex: qt_property!(i32; NOTIFY buttonConfigChanged),
+    leftDoublePressIndex: qt_property!(i32; NOTIFY buttonConfigChanged),
+    rightDoublePressIndex: qt_property!(i32; NOTIFY buttonConfigChanged),
+    leftTriplePressIndex: qt_property!(i32; NOTIFY buttonConfigChanged),
+    rightTriplePressIndex: qt_property!(i32; NOTIFY buttonConfigChanged),
+    leftLongPressIndex: qt_property!(i32; NOTIFY buttonConfigChanged),
+    rightLongPressIndex: qt_property!(i32; NOTIFY buttonConfigChanged),
     normalModeInCycle: qt_property!(bool; NOTIFY buttonConfigChanged),
     transparencyModeInCycle: qt_property!(bool; NOTIFY buttonConfigChanged),
     noiseCancelingModeInCycle: qt_property!(bool; NOTIFY buttonConfigChanged),
@@ -235,8 +241,14 @@ impl Backend {
             ancSensitivityMax: 0,
             soundModesChanged: Default::default(),
             buttonActions: QVariantList::default(),
-            buttonValues: QVariantList::default(),
-            buttonValueIndexes: QVariantList::default(),
+            leftSinglePressIndex: -1,
+            rightSinglePressIndex: -1,
+            leftDoublePressIndex: -1,
+            rightDoublePressIndex: -1,
+            leftTriplePressIndex: -1,
+            rightTriplePressIndex: -1,
+            leftLongPressIndex: -1,
+            rightLongPressIndex: -1,
             normalModeInCycle: false,
             transparencyModeInCycle: false,
             noiseCancelingModeInCycle: false,
@@ -443,26 +455,14 @@ impl Backend {
 
         // Button configuration.
         self.buttonActions = select_options(device.as_ref(), SettingId::LeftSinglePress);
-        let button_ids = [
-            SettingId::LeftSinglePress,
-            SettingId::RightSinglePress,
-            SettingId::LeftDoublePress,
-            SettingId::RightDoublePress,
-            SettingId::LeftTriplePress,
-            SettingId::RightTriplePress,
-            SettingId::LeftLongPress,
-            SettingId::RightLongPress,
-        ];
-        let mut button_values = QVariantList::default();
-        let mut button_indexes = QVariantList::default();
-        for id in button_ids {
-            button_values.push(QVariant::from(QString::from(
-                current_select_value(device.as_ref(), id).unwrap_or_default(),
-            )));
-            button_indexes.push(QVariant::from(select_index(device.as_ref(), id)));
-        }
-        self.buttonValues = button_values;
-        self.buttonValueIndexes = button_indexes;
+        self.leftSinglePressIndex = select_index(device.as_ref(), SettingId::LeftSinglePress);
+        self.rightSinglePressIndex = select_index(device.as_ref(), SettingId::RightSinglePress);
+        self.leftDoublePressIndex = select_index(device.as_ref(), SettingId::LeftDoublePress);
+        self.rightDoublePressIndex = select_index(device.as_ref(), SettingId::RightDoublePress);
+        self.leftTriplePressIndex = select_index(device.as_ref(), SettingId::LeftTriplePress);
+        self.rightTriplePressIndex = select_index(device.as_ref(), SettingId::RightTriplePress);
+        self.leftLongPressIndex = select_index(device.as_ref(), SettingId::LeftLongPress);
+        self.rightLongPressIndex = select_index(device.as_ref(), SettingId::RightLongPress);
         self.normalModeInCycle = toggle_value(device.as_ref(), SettingId::NormalModeInCycle);
         self.transparencyModeInCycle =
             toggle_value(device.as_ref(), SettingId::TransparencyModeInCycle);

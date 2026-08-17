@@ -544,30 +544,79 @@ KC.ApplicationWindow {
                     level: 2
                 }
 
-                // Button press actions. The order matches the device: left, right,
-                // then double/triple/long per side.
-                Repeater {
-                    model: ListModel {
-                        ListElement { label: "Left Single Press"; settingId: "leftSinglePress"; valueIndex: 0 }
-                        ListElement { label: "Right Single Press"; settingId: "rightSinglePress"; valueIndex: 1 }
-                        ListElement { label: "Left Double Press"; settingId: "leftDoublePress"; valueIndex: 2 }
-                        ListElement { label: "Right Double Press"; settingId: "rightDoublePress"; valueIndex: 3 }
-                        ListElement { label: "Left Triple Press"; settingId: "leftTriplePress"; valueIndex: 4 }
-                        ListElement { label: "Right Triple Press"; settingId: "rightTriplePress"; valueIndex: 5 }
-                        ListElement { label: "Left Long Press"; settingId: "leftLongPress"; valueIndex: 6 }
-                        ListElement { label: "Right Long Press"; settingId: "rightLongPress"; valueIndex: 7 }
+                // Button press actions. Each press maps to a select of shared
+                // actions; the selected index is exposed per-button as a top-level
+                // i32 property (numers inside QVariantList don't reach QML).
+                RowLayout {
+                    Layout.fillWidth: true
+                    QQC2.Label { text: "Left Single Press"; Layout.fillWidth: true }
+                    QQC2.ComboBox {
+                        model: Backend.buttonActions
+                        currentIndex: Backend.leftSinglePressIndex
+                        onActivated: (index) => Backend.setSelectByIndex("leftSinglePress", index)
                     }
-                    delegate: RowLayout {
-                        Layout.fillWidth: true
-                        QQC2.Label {
-                            text: model.label
-                            Layout.fillWidth: true
-                        }
-                        QQC2.ComboBox {
-                            model: Backend.buttonActions
-                            currentIndex: Backend.buttonValueIndexes[model.valueIndex]
-                            onActivated: (index) => Backend.setSelectByIndex(model.settingId, index)
-                        }
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    QQC2.Label { text: "Right Single Press"; Layout.fillWidth: true }
+                    QQC2.ComboBox {
+                        model: Backend.buttonActions
+                        currentIndex: Backend.rightSinglePressIndex
+                        onActivated: (index) => Backend.setSelectByIndex("rightSinglePress", index)
+                    }
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    QQC2.Label { text: "Left Double Press"; Layout.fillWidth: true }
+                    QQC2.ComboBox {
+                        model: Backend.buttonActions
+                        currentIndex: Backend.leftDoublePressIndex
+                        onActivated: (index) => Backend.setSelectByIndex("leftDoublePress", index)
+                    }
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    QQC2.Label { text: "Right Double Press"; Layout.fillWidth: true }
+                    QQC2.ComboBox {
+                        model: Backend.buttonActions
+                        currentIndex: Backend.rightDoublePressIndex
+                        onActivated: (index) => Backend.setSelectByIndex("rightDoublePress", index)
+                    }
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    QQC2.Label { text: "Left Triple Press"; Layout.fillWidth: true }
+                    QQC2.ComboBox {
+                        model: Backend.buttonActions
+                        currentIndex: Backend.leftTriplePressIndex
+                        onActivated: (index) => Backend.setSelectByIndex("leftTriplePress", index)
+                    }
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    QQC2.Label { text: "Right Triple Press"; Layout.fillWidth: true }
+                    QQC2.ComboBox {
+                        model: Backend.buttonActions
+                        currentIndex: Backend.rightTriplePressIndex
+                        onActivated: (index) => Backend.setSelectByIndex("rightTriplePress", index)
+                    }
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    QQC2.Label { text: "Left Long Press"; Layout.fillWidth: true }
+                    QQC2.ComboBox {
+                        model: Backend.buttonActions
+                        currentIndex: Backend.leftLongPressIndex
+                        onActivated: (index) => Backend.setSelectByIndex("leftLongPress", index)
+                    }
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    QQC2.Label { text: "Right Long Press"; Layout.fillWidth: true }
+                    QQC2.ComboBox {
+                        model: Backend.buttonActions
+                        currentIndex: Backend.rightLongPressIndex
+                        onActivated: (index) => Backend.setSelectByIndex("rightLongPress", index)
                     }
                 }
 
