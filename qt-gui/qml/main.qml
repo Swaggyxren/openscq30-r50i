@@ -411,8 +411,8 @@ KC.ApplicationWindow {
                     }
                     QQC2.ComboBox {
                         model: Backend.noiseCancelingModeOptions
-                        currentIndex: Backend.noiseCancelingModeOptions.indexOf(Backend.noiseCancelingMode)
-                        onActivated: (index) => Backend.setSelect("noiseCancelingMode", Backend.noiseCancelingModeOptions[index])
+                        currentIndex: Backend.noiseCancelingModeIndex
+                        onActivated: (index) => Backend.setSelectByIndex("noiseCancelingMode", index)
                     }
                 }
                 RowLayout {
@@ -423,8 +423,8 @@ KC.ApplicationWindow {
                     }
                     QQC2.ComboBox {
                         model: Backend.multiSceneNoiseCancelingOptions
-                        currentIndex: Backend.multiSceneNoiseCancelingOptions.indexOf(Backend.multiSceneNoiseCanceling)
-                        onActivated: (index) => Backend.setSelect("multiSceneNoiseCanceling", Backend.multiSceneNoiseCancelingOptions[index])
+                        currentIndex: Backend.multiSceneNoiseCancelingIndex
+                        onActivated: (index) => Backend.setSelectByIndex("multiSceneNoiseCanceling", index)
                     }
                 }
 
@@ -507,8 +507,8 @@ KC.ApplicationWindow {
                     }
                     QQC2.ComboBox {
                         model: Backend.eqPresets
-                        currentIndex: Backend.eqPresets.indexOf(Backend.eqPreset)
-                        onActivated: (index) => Backend.setSelect("presetEqualizerProfile", Backend.eqPresets[index])
+                        currentIndex: Backend.eqPresetIndex
+                        onActivated: (index) => Backend.setSelectByIndex("presetEqualizerProfile", index)
                     }
                 }
                 Repeater {
@@ -565,8 +565,8 @@ KC.ApplicationWindow {
                         }
                         QQC2.ComboBox {
                             model: Backend.buttonActions
-                            currentIndex: Backend.buttonActions.indexOf(Backend.buttonValues[model.valueIndex])
-                            onActivated: (index) => Backend.setSelect(model.settingId, Backend.buttonActions[index])
+                            currentIndex: Backend.buttonValueIndexes[model.valueIndex]
+                            onActivated: (index) => Backend.setSelectByIndex(model.settingId, index)
                         }
                     }
                 }
@@ -726,8 +726,8 @@ KC.ApplicationWindow {
                     }
                     QQC2.ComboBox {
                         model: Backend.autoPowerOffOptions
-                        currentIndex: Backend.autoPowerOffOptions.indexOf(Backend.autoPowerOff)
-                        onActivated: (index) => Backend.setSelect("autoPowerOff", Backend.autoPowerOffOptions[index])
+                        currentIndex: Backend.autoPowerOffIndex
+                        onActivated: (index) => Backend.setSelectByIndex("autoPowerOff", index)
                     }
                 }
 

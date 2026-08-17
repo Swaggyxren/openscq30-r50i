@@ -85,6 +85,7 @@ pub struct Backend {
     autoPowerOff: qt_property!(String; NOTIFY autoPowerOffChanged),
     autoPowerOffChanged: qt_signal!(),
     autoPowerOffOptions: qt_property!(QVariantList; NOTIFY autoPowerOffChanged),
+    autoPowerOffIndex: qt_property!(i32; NOTIFY autoPowerOffChanged),
 
     // Equalizer.
     eqBands: qt_property!(QVariantList; NOTIFY eqBandsChanged),
@@ -95,6 +96,7 @@ pub struct Backend {
     eqPreset: qt_property!(String; NOTIFY eqPresetChanged),
     eqPresetChanged: qt_signal!(),
     eqPresets: qt_property!(QVariantList; NOTIFY eqPresetChanged),
+    eqPresetIndex: qt_property!(i32; NOTIFY eqPresetChanged),
 
     // Device information.
     serialNumber: qt_property!(String; NOTIFY infoChanged),
@@ -108,8 +110,10 @@ pub struct Backend {
     // Sound modes.
     noiseCancelingMode: qt_property!(String; NOTIFY soundModesChanged),
     noiseCancelingModeOptions: qt_property!(QVariantList; NOTIFY soundModesChanged),
+    noiseCancelingModeIndex: qt_property!(i32; NOTIFY soundModesChanged),
     multiSceneNoiseCanceling: qt_property!(String; NOTIFY soundModesChanged),
     multiSceneNoiseCancelingOptions: qt_property!(QVariantList; NOTIFY soundModesChanged),
+    multiSceneNoiseCancelingIndex: qt_property!(i32; NOTIFY soundModesChanged),
     manualNoiseCanceling: qt_property!(i32; NOTIFY soundModesChanged),
     manualNoiseCancelingMin: qt_property!(i32; NOTIFY soundModesChanged),
     manualNoiseCancelingMax: qt_property!(i32; NOTIFY soundModesChanged),
@@ -122,6 +126,7 @@ pub struct Backend {
     // Button configuration.
     buttonActions: qt_property!(QVariantList; NOTIFY buttonConfigChanged),
     buttonValues: qt_property!(QVariantList; NOTIFY buttonConfigChanged),
+    buttonValueIndexes: qt_property!(QVariantList; NOTIFY buttonConfigChanged),
     normalModeInCycle: qt_property!(bool; NOTIFY buttonConfigChanged),
     transparencyModeInCycle: qt_property!(bool; NOTIFY buttonConfigChanged),
     noiseCancelingModeInCycle: qt_property!(bool; NOTIFY buttonConfigChanged),
@@ -135,6 +140,7 @@ pub struct Backend {
     setCategory: qt_method!(fn(&mut self, id: String)),
     setToggle: qt_method!(fn(&mut self, id: String, value: bool)),
     setSelect: qt_method!(fn(&mut self, id: String, value: String)),
+    setSelectByIndex: qt_method!(fn(&mut self, id: String, index: i32)),
     setRange: qt_method!(fn(&mut self, id: String, value: i32)),
     setEqualizerBand: qt_method!(fn(&mut self, id: String, index: i32, value: i32)),
     triggerAction: qt_method!(fn(&mut self, id: String)),
@@ -197,6 +203,7 @@ impl Backend {
             autoPowerOff: String::new(),
             autoPowerOffChanged: Default::default(),
             autoPowerOffOptions: QVariantList::default(),
+            autoPowerOffIndex: -1,
             eqBands: QVariantList::default(),
             eqBandsChanged: Default::default(),
             eqMin: 0,
@@ -205,6 +212,7 @@ impl Backend {
             eqPreset: String::new(),
             eqPresetChanged: Default::default(),
             eqPresets: QVariantList::default(),
+            eqPresetIndex: -1,
             serialNumber: String::new(),
             firmwareVersion: String::new(),
             firmwareVersionLeft: String::new(),
@@ -214,8 +222,10 @@ impl Backend {
             infoChanged: Default::default(),
             noiseCancelingMode: String::new(),
             noiseCancelingModeOptions: QVariantList::default(),
+            noiseCancelingModeIndex: -1,
             multiSceneNoiseCanceling: String::new(),
             multiSceneNoiseCancelingOptions: QVariantList::default(),
+            multiSceneNoiseCancelingIndex: -1,
             manualNoiseCanceling: 0,
             manualNoiseCancelingMin: 0,
             manualNoiseCancelingMax: 0,
@@ -226,6 +236,7 @@ impl Backend {
             soundModesChanged: Default::default(),
             buttonActions: QVariantList::default(),
             buttonValues: QVariantList::default(),
+            buttonValueIndexes: QVariantList::default(),
             normalModeInCycle: false,
             transparencyModeInCycle: false,
             noiseCancelingModeInCycle: false,
@@ -237,6 +248,7 @@ impl Backend {
             setCategory: Default::default(),
             setToggle: Default::default(),
             setSelect: Default::default(),
+            setSelectByIndex: Default::default(),
             setRange: Default::default(),
             setEqualizerBand: Default::default(),
             triggerAction: Default::default(),
@@ -365,6 +377,7 @@ impl Backend {
         self.autoPowerOff =
             current_select_value(device.as_ref(), SettingId::AutoPowerOff).unwrap_or_default();
         self.autoPowerOffOptions = select_options(device.as_ref(), SettingId::AutoPowerOff);
+        self.autoPowerOffIndex = select_index(device.as_ref(), SettingId::AutoPowerOff);
         self.autoPowerOffChanged();
 
         // Equalizer.
@@ -395,6 +408,7 @@ impl Backend {
         self.eqPreset = current_select_value(device.as_ref(), SettingId::PresetEqualizerProfile)
             .unwrap_or_default();
         self.eqPresets = select_options(device.as_ref(), SettingId::PresetEqualizerProfile);
+        self.eqPresetIndex = select_index(device.as_ref(), SettingId::PresetEqualizerProfile);
         self.eqPresetChanged();
 
         // Sound modes.
@@ -403,11 +417,14 @@ impl Backend {
                 .unwrap_or_default();
         self.noiseCancelingModeOptions =
             select_options(device.as_ref(), SettingId::NoiseCancelingMode);
+        self.noiseCancelingModeIndex = select_index(device.as_ref(), SettingId::NoiseCancelingMode);
         self.multiSceneNoiseCanceling =
             current_select_value(device.as_ref(), SettingId::MultiSceneNoiseCanceling)
                 .unwrap_or_default();
         self.multiSceneNoiseCancelingOptions =
             select_options(device.as_ref(), SettingId::MultiSceneNoiseCanceling);
+        self.multiSceneNoiseCancelingIndex =
+            select_index(device.as_ref(), SettingId::MultiSceneNoiseCanceling);
         let (value, min, max) = range_info(device.as_ref(), SettingId::ManualNoiseCanceling);
         self.manualNoiseCanceling = value;
         self.manualNoiseCancelingMin = min;
@@ -437,12 +454,15 @@ impl Backend {
             SettingId::RightLongPress,
         ];
         let mut button_values = QVariantList::default();
+        let mut button_indexes = QVariantList::default();
         for id in button_ids {
             button_values.push(QVariant::from(QString::from(
                 current_select_value(device.as_ref(), id).unwrap_or_default(),
             )));
+            button_indexes.push(QVariant::from(select_index(device.as_ref(), id)));
         }
         self.buttonValues = button_values;
+        self.buttonValueIndexes = button_indexes;
         self.normalModeInCycle = toggle_value(device.as_ref(), SettingId::NormalModeInCycle);
         self.transparencyModeInCycle =
             toggle_value(device.as_ref(), SettingId::TransparencyModeInCycle);
@@ -777,6 +797,34 @@ impl Backend {
         self.send_setting(device, vec![(setting_id, value)]);
     }
 
+    /// Like `setSelect`, but takes the display index and maps it back to the raw
+    /// option value, since QML shows localized labels while the device speaks raw
+    /// option names.
+    fn setSelectByIndex(&mut self, id: String, index: i32) {
+        let Some(device) = self.current_device.clone() else {
+            return;
+        };
+        let Some(setting_id) = SettingId::from_str(&id).ok() else {
+            return;
+        };
+        let (Some(Setting::Select { setting, .. })
+        | Some(Setting::OptionalSelect { setting, .. })
+        | Some(Setting::ModifiableSelect { setting, .. })
+        | Some(Setting::PresetEqualizerProfileSelect {
+            select: setting, ..
+        })) = device.setting(&setting_id)
+        else {
+            return;
+        };
+        let Some(raw) = setting.options.get(index as usize) else {
+            return;
+        };
+        let Some(value) = select_value(device.as_ref(), setting_id, raw.to_string()) else {
+            return;
+        };
+        self.send_setting(device, vec![(setting_id, value)]);
+    }
+
     fn setRange(&mut self, id: String, value: i32) {
         let Some(device) = self.current_device.clone() else {
             return;
@@ -959,6 +1007,8 @@ fn dual_connection_devices(device: &dyn OpenSCQ30Device) -> QVariantList {
 }
 
 /// Returns the raw option names for a select-style setting as a QML list.
+/// Returns the localized option labels for a select-style setting, matching the
+/// original GUI which renders `Select::localized_options`.
 fn select_options(device: &dyn OpenSCQ30Device, setting_id: SettingId) -> QVariantList {
     let select = match device.setting(&setting_id) {
         Some(Setting::Select { setting, .. })
@@ -973,10 +1023,37 @@ fn select_options(device: &dyn OpenSCQ30Device, setting_id: SettingId) -> QVaria
         return QVariantList::default();
     };
     select
-        .options
+        .localized_options
         .iter()
-        .map(|option| QVariant::from(QString::from(option.as_ref())))
+        .map(|label| QVariant::from(QString::from(label.as_str())))
         .collect()
+}
+
+/// Returns the index of the currently selected option for a select-style
+/// setting, or `-1` when the value is unset. Computed in Rust so QML never has
+/// to compare QString-backed values with `===`.
+fn select_index(device: &dyn OpenSCQ30Device, setting_id: SettingId) -> i32 {
+    let position = |select: &Select, value: Option<&str>| {
+        let Some(value) = value else {
+            return -1;
+        };
+        select
+            .options
+            .iter()
+            .position(|option| option.as_ref() == value)
+            .map_or(-1, |index| index as i32)
+    };
+    match device.setting(&setting_id) {
+        Some(Setting::Select { setting, value }) => position(&setting, Some(&value)),
+        Some(Setting::OptionalSelect { setting, value })
+        | Some(Setting::ModifiableSelect { setting, value })
+        | Some(Setting::PresetEqualizerProfileSelect {
+            select: setting,
+            value,
+            ..
+        }) => position(&setting, value.as_deref()),
+        _ => -1,
+    }
 }
 
 fn select_value(
