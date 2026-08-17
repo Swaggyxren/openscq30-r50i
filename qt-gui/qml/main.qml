@@ -410,9 +410,9 @@ KC.ApplicationWindow {
                         Layout.fillWidth: true
                     }
                     QQC2.ComboBox {
-                        model: ["Transport", "Outdoor", "Indoor", "Custom"]
-                        currentIndex: ["Transport", "Outdoor", "Indoor", "Custom"].indexOf(Backend.noiseCancelingMode)
-                        onActivated: (index) => Backend.setSelect("noiseCancelingMode", ["Transport", "Outdoor", "Indoor", "Custom"][index])
+                        model: Backend.noiseCancelingModeOptions
+                        currentIndex: Backend.noiseCancelingModeOptions.indexOf(Backend.noiseCancelingMode)
+                        onActivated: (index) => Backend.setSelect("noiseCancelingMode", Backend.noiseCancelingModeOptions[index])
                     }
                 }
                 RowLayout {
@@ -422,9 +422,9 @@ KC.ApplicationWindow {
                         Layout.fillWidth: true
                     }
                     QQC2.ComboBox {
-                        model: ["Transport", "Outdoor", "Indoor"]
-                        currentIndex: ["Transport", "Outdoor", "Indoor"].indexOf(Backend.multiSceneNoiseCanceling)
-                        onActivated: (index) => Backend.setSelect("multiSceneNoiseCanceling", ["Transport", "Outdoor", "Indoor"][index])
+                        model: Backend.multiSceneNoiseCancelingOptions
+                        currentIndex: Backend.multiSceneNoiseCancelingOptions.indexOf(Backend.multiSceneNoiseCanceling)
+                        onActivated: (index) => Backend.setSelect("multiSceneNoiseCanceling", Backend.multiSceneNoiseCancelingOptions[index])
                     }
                 }
 
@@ -640,17 +640,6 @@ KC.ApplicationWindow {
                 RowLayout {
                     Layout.fillWidth: true
                     QQC2.Label {
-                        text: "Dual Connections"
-                        Layout.fillWidth: true
-                    }
-                    QQC2.Switch {
-                        checked: Backend.dualConnections
-                        onToggled: Backend.setToggle("dualConnections", checked)
-                    }
-                }
-                RowLayout {
-                    Layout.fillWidth: true
-                    QQC2.Label {
                         text: "Touch Tone"
                         Layout.fillWidth: true
                     }
@@ -673,6 +662,57 @@ KC.ApplicationWindow {
 
                 Loader { sourceComponent: sectionDivider }
 
+                // ---------------- Dual Connections ----------------
+                KC.Heading {
+                    text: "Dual Connections"
+                    level: 2
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    QQC2.Label {
+                        text: "Enable"
+                        Layout.fillWidth: true
+                    }
+                    QQC2.Switch {
+                        checked: Backend.dualConnections
+                        onToggled: Backend.setToggle("dualConnections", checked)
+                    }
+                }
+                QQC2.Label {
+                    text: "Connected devices"
+                    Layout.fillWidth: true
+                    Layout.topMargin: Platform.Units.smallSpacing
+                    visible: Backend.dualConnectionDevices.length > 0
+                }
+                Repeater {
+                    model: Backend.dualConnectionDevices
+                    delegate: RowLayout {
+                        Layout.fillWidth: true
+                        QQC2.Label {
+                            text: modelData.name + "  (" + modelData.mac + ")"
+                            Layout.fillWidth: true
+                        }
+                        QQC2.Button {
+                            text: "Remove"
+                            icon.name: "list-remove-symbolic"
+                            onClicked: Backend.removeDualConnectionDevice(modelData.mac)
+                        }
+                        QQC2.Switch {
+                            checked: modelData.checked
+                            onToggled: Backend.setDualConnectionDevice(modelData.mac, checked)
+                        }
+                    }
+                }
+                QQC2.Label {
+                    Layout.fillWidth: true
+                    text: "No other devices found. Enable dual connections on the earbuds and keep another Bluetooth device nearby."
+                    color: Platform.Theme.disabledTextColor
+                    wrapMode: Text.WordWrap
+                    visible: Backend.dualConnections && Backend.dualConnectionDevices.length === 0
+                }
+
+                Loader { sourceComponent: sectionDivider }
+
                 // ---------------- Power ----------------
                 KC.Heading {
                     text: "Power"
@@ -685,9 +725,9 @@ KC.ApplicationWindow {
                         Layout.fillWidth: true
                     }
                     QQC2.ComboBox {
-                        model: ["10m", "20m", "30m", "60m"]
-                        currentIndex: ["10m", "20m", "30m", "60m"].indexOf(Backend.autoPowerOff)
-                        onActivated: (index) => Backend.setSelect("autoPowerOff", ["10m", "20m", "30m", "60m"][index])
+                        model: Backend.autoPowerOffOptions
+                        currentIndex: Backend.autoPowerOffOptions.indexOf(Backend.autoPowerOff)
+                        onActivated: (index) => Backend.setSelect("autoPowerOff", Backend.autoPowerOffOptions[index])
                     }
                 }
 

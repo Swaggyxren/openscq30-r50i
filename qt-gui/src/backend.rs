@@ -5,7 +5,7 @@ use openscq30_lib::{
     DeviceModel, OpenSCQ30Session,
     connection::{ConnectionDescriptor, ConnectionStatus},
     device::OpenSCQ30Device,
-    settings::{CategoryId, Select, Setting, SettingId, Value},
+    settings::{CategoryId, MultiSelectWithRemoveCommand, Select, Setting, SettingId, Value},
     storage::PairedDevice,
 };
 use qmetaobject::*;
@@ -73,6 +73,7 @@ pub struct Backend {
     gamingModeChanged: qt_signal!(),
     dualConnections: qt_property!(bool; NOTIFY dualConnectionsChanged),
     dualConnectionsChanged: qt_signal!(),
+    dualConnectionDevices: qt_property!(QVariantList; NOTIFY dualConnectionsChanged),
     touchTone: qt_property!(bool; NOTIFY touchToneChanged),
     touchToneChanged: qt_signal!(),
     lowBatteryPrompt: qt_property!(bool; NOTIFY lowBatteryPromptChanged),
@@ -83,6 +84,7 @@ pub struct Backend {
     // Auto power off (select).
     autoPowerOff: qt_property!(String; NOTIFY autoPowerOffChanged),
     autoPowerOffChanged: qt_signal!(),
+    autoPowerOffOptions: qt_property!(QVariantList; NOTIFY autoPowerOffChanged),
 
     // Equalizer.
     eqBands: qt_property!(QVariantList; NOTIFY eqBandsChanged),
@@ -105,7 +107,9 @@ pub struct Backend {
 
     // Sound modes.
     noiseCancelingMode: qt_property!(String; NOTIFY soundModesChanged),
+    noiseCancelingModeOptions: qt_property!(QVariantList; NOTIFY soundModesChanged),
     multiSceneNoiseCanceling: qt_property!(String; NOTIFY soundModesChanged),
+    multiSceneNoiseCancelingOptions: qt_property!(QVariantList; NOTIFY soundModesChanged),
     manualNoiseCanceling: qt_property!(i32; NOTIFY soundModesChanged),
     manualNoiseCancelingMin: qt_property!(i32; NOTIFY soundModesChanged),
     manualNoiseCancelingMax: qt_property!(i32; NOTIFY soundModesChanged),
@@ -135,6 +139,8 @@ pub struct Backend {
     setEqualizerBand: qt_method!(fn(&mut self, id: String, index: i32, value: i32)),
     triggerAction: qt_method!(fn(&mut self, id: String)),
     setAncMode: qt_method!(fn(&mut self, mode: String)),
+    setDualConnectionDevice: qt_method!(fn(&mut self, mac: String, checked: bool)),
+    removeDualConnectionDevice: qt_method!(fn(&mut self, mac: String)),
     quit: qt_method!(fn(&mut self)),
 
     // Tray signals.
@@ -181,6 +187,7 @@ impl Backend {
             gamingModeChanged: Default::default(),
             dualConnections: false,
             dualConnectionsChanged: Default::default(),
+            dualConnectionDevices: QVariantList::default(),
             touchTone: false,
             touchToneChanged: Default::default(),
             lowBatteryPrompt: false,
@@ -189,6 +196,7 @@ impl Backend {
             windNoiseSuppressionChanged: Default::default(),
             autoPowerOff: String::new(),
             autoPowerOffChanged: Default::default(),
+            autoPowerOffOptions: QVariantList::default(),
             eqBands: QVariantList::default(),
             eqBandsChanged: Default::default(),
             eqMin: 0,
@@ -205,7 +213,9 @@ impl Backend {
             hostDevice: String::new(),
             infoChanged: Default::default(),
             noiseCancelingMode: String::new(),
+            noiseCancelingModeOptions: QVariantList::default(),
             multiSceneNoiseCanceling: String::new(),
+            multiSceneNoiseCancelingOptions: QVariantList::default(),
             manualNoiseCanceling: 0,
             manualNoiseCancelingMin: 0,
             manualNoiseCancelingMax: 0,
@@ -231,6 +241,8 @@ impl Backend {
             setEqualizerBand: Default::default(),
             triggerAction: Default::default(),
             setAncMode: Default::default(),
+            setDualConnectionDevice: Default::default(),
+            removeDualConnectionDevice: Default::default(),
             quit: Default::default(),
             openRequested: Default::default(),
         }
@@ -340,6 +352,7 @@ impl Backend {
         self.gamingMode = toggle_value(device.as_ref(), SettingId::GamingMode);
         self.gamingModeChanged();
         self.dualConnections = toggle_value(device.as_ref(), SettingId::DualConnections);
+        self.dualConnectionDevices = dual_connection_devices(device.as_ref());
         self.dualConnectionsChanged();
         self.touchTone = toggle_value(device.as_ref(), SettingId::TouchTone);
         self.touchToneChanged();
@@ -351,6 +364,7 @@ impl Backend {
         // Auto power off.
         self.autoPowerOff =
             current_select_value(device.as_ref(), SettingId::AutoPowerOff).unwrap_or_default();
+        self.autoPowerOffOptions = select_options(device.as_ref(), SettingId::AutoPowerOff);
         self.autoPowerOffChanged();
 
         // Equalizer.
@@ -387,9 +401,13 @@ impl Backend {
         self.noiseCancelingMode =
             current_select_value(device.as_ref(), SettingId::NoiseCancelingMode)
                 .unwrap_or_default();
+        self.noiseCancelingModeOptions =
+            select_options(device.as_ref(), SettingId::NoiseCancelingMode);
         self.multiSceneNoiseCanceling =
             current_select_value(device.as_ref(), SettingId::MultiSceneNoiseCanceling)
                 .unwrap_or_default();
+        self.multiSceneNoiseCancelingOptions =
+            select_options(device.as_ref(), SettingId::MultiSceneNoiseCanceling);
         let (value, min, max) = range_info(device.as_ref(), SettingId::ManualNoiseCanceling);
         self.manualNoiseCanceling = value;
         self.manualNoiseCancelingMin = min;
@@ -801,6 +819,49 @@ impl Backend {
         self.setSelect("ambientSoundMode".to_string(), mode);
     }
 
+    /// Toggles one device in the dual-connections picker on/off.
+    fn setDualConnectionDevice(&mut self, mac: String, checked: bool) {
+        let Some(device) = self.current_device.clone() else {
+            return;
+        };
+        let Some(Setting::MultiSelectWithRemove { values, .. }) =
+            device.setting(&SettingId::DualConnectionsDevices)
+        else {
+            return;
+        };
+        let mut selected: Vec<Cow<'static, str>> = values
+            .iter()
+            .filter(|value| value.as_ref() != mac)
+            .map(|value| Cow::Owned(value.to_string()))
+            .collect();
+        if checked {
+            selected.push(Cow::Owned(mac));
+        }
+        self.send_setting(
+            device,
+            vec![(
+                SettingId::DualConnectionsDevices,
+                Value::StringVec(selected),
+            )],
+        );
+    }
+
+    /// Removes a device from the dual-connections list entirely.
+    fn removeDualConnectionDevice(&mut self, mac: String) {
+        let Some(device) = self.current_device.clone() else {
+            return;
+        };
+        self.send_setting(
+            device,
+            vec![(
+                SettingId::DualConnectionsDevices,
+                Value::MultiSelectWithRemoveCommand(MultiSelectWithRemoveCommand::Remove(
+                    Cow::Owned(mac),
+                )),
+            )],
+        );
+    }
+
     fn set_equalizer_preset(&mut self, preset: String) {
         let Some(device) = self.current_device.clone() else {
             return;
@@ -865,6 +926,36 @@ fn range_info(device: &dyn OpenSCQ30Device, setting_id: SettingId) -> (i32, i32,
         }
         _ => (0, 0, 0),
     }
+}
+
+/// Builds a QML list of `{ name, mac, checked }` maps for the dual-connections
+/// device picker from the `MultiSelectWithRemove` setting.
+fn dual_connection_devices(device: &dyn OpenSCQ30Device) -> QVariantList {
+    let Some(Setting::MultiSelectWithRemove { setting, values }) =
+        device.setting(&SettingId::DualConnectionsDevices)
+    else {
+        return QVariantList::default();
+    };
+
+    let mut list = QVariantList::default();
+    for (index, option) in setting.options.iter().enumerate() {
+        let mut item = QVariantMap::default();
+        put_str(&mut item, "mac", option);
+        let name = setting
+            .localized_options
+            .get(index)
+            .map(|name| name.as_str())
+            .filter(|name| !name.is_empty())
+            .unwrap_or(option.as_ref());
+        put_str(&mut item, "name", name);
+        put(
+            &mut item,
+            "checked",
+            QVariant::from(values.iter().any(|value| value.as_ref() == option.as_ref())),
+        );
+        list.push(QVariant::from(item));
+    }
+    list
 }
 
 /// Returns the raw option names for a select-style setting as a QML list.
