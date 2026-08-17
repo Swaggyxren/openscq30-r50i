@@ -153,6 +153,7 @@ pub struct Backend {
     setAncMode: qt_method!(fn(&mut self, mode: String)),
     setDualConnectionDevice: qt_method!(fn(&mut self, mac: String, checked: bool)),
     removeDualConnectionDevice: qt_method!(fn(&mut self, mac: String)),
+    rescanDualConnections: qt_method!(fn(&mut self)),
     quit: qt_method!(fn(&mut self)),
 
     // Tray signals.
@@ -267,6 +268,7 @@ impl Backend {
             setAncMode: Default::default(),
             setDualConnectionDevice: Default::default(),
             removeDualConnectionDevice: Default::default(),
+            rescanDualConnections: Default::default(),
             quit: Default::default(),
             openRequested: Default::default(),
         }
@@ -908,6 +910,34 @@ impl Backend {
                 )),
             )],
         );
+    }
+
+    /// Re-requests the dual-connections device list. The device responds
+    /// asynchronously and `watch_for_changes` triggers a refresh that
+    /// re-populates `dualConnectionDevices`.
+    fn rescanDualConnections(&mut self) {
+        let Some(device) = self.current_device.clone() else {
+            return;
+        };
+        self.set_busy(true);
+        let runtime = self.runtime.clone();
+        let qptr = QPointer::from(&*self);
+        let done = queued_callback(move |result: Result<(), String>| {
+            if let Some(pinned) = qptr.as_pinned() {
+                let mut this = pinned.borrow_mut();
+                this.set_busy(false);
+                if let Err(err) = result {
+                    this.set_status(err);
+                }
+            }
+        });
+        runtime.spawn(async move {
+            let result = device
+                .request_dual_connections_devices()
+                .await
+                .map_err(|err| format!("{err:#}"));
+            done(result);
+        });
     }
 
     fn set_equalizer_preset(&mut self, preset: String) {

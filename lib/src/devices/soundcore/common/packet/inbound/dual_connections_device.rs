@@ -21,7 +21,7 @@ pub struct DualConnectionsDevicePacket {
 }
 
 impl DualConnectionsDevicePacket {
-    pub const COMMAND: Command = Command([0x0b, 0x01]);
+    pub const COMMAND: Command = Command([0x0b, 0x02]);
 }
 
 impl ToPacket for DualConnectionsDevicePacket {

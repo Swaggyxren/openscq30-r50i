@@ -3,7 +3,7 @@ use macaddr::MacAddr6;
 use crate::devices::soundcore::common::packet::{self, Command};
 
 pub fn request_dual_connections_devices() -> packet::Outbound {
-    packet::Outbound::new(Command([0x0b, 0x01]), Vec::new())
+    packet::Outbound::new(Command([0x0b, 0x02]), Vec::new())
 }
 
 pub fn set_dual_connections_enabled(is_enabled: bool) -> packet::Outbound {

@@ -453,6 +453,14 @@ where
             .set_setting_values(&self.state_sender, setting_values)
             .await
     }
+
+    async fn request_dual_connections_devices(&self) -> device::Result<()> {
+        // Fire-and-forget: the response packets are handled by the packet
+        // handler, which updates device state and fires watch_for_changes.
+        self.packet_io_controller
+            .send_without_response(&packet::outbound::request_dual_connections_devices())
+            .await
+    }
 }
 
 #[cfg(test)]
@@ -529,7 +537,7 @@ pub mod test_utils {
                                 // default to no response for dual connections. a bit of a hack, but since dual
                                 // connections' correct response is 0 or more packets instead of the normal 1, we want
                                 // to send 0 packets, but lack an api for that.
-                                None if command == Command([0x0b, 0x01]) => {}
+                                None if command == Command([0x0b, 0x02]) => {}
                                 None => panic!("missing response for {command:?}")
                             }
                         }

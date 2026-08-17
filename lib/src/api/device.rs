@@ -128,4 +128,11 @@ pub trait OpenSCQ30Device {
     /// For example, if the device has a command that makes multiple changes at once, that command can be sent only a
     /// single time rather than once for each change.
     async fn set_setting_values(&self, setting_values: Vec<(SettingId, Value)>) -> Result<()>;
+
+    /// Re-requests the current dual-connections device list from the device.
+    /// The response is delivered asynchronously via [`watch_for_changes`](Self::watch_for_changes).
+    /// No-op by default; devices that support dual connections override this.
+    async fn request_dual_connections_devices(&self) -> Result<()> {
+        Ok(())
+    }
 }

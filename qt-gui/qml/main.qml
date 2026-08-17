@@ -722,6 +722,12 @@ KC.ApplicationWindow {
                         text: "Enable"
                         Layout.fillWidth: true
                     }
+                    QQC2.Button {
+                        text: "Rescan"
+                        icon.name: "view-refresh"
+                        enabled: !Backend.busy
+                        onClicked: Backend.rescanDualConnections()
+                    }
                     QQC2.Switch {
                         checked: Backend.dualConnections
                         onToggled: Backend.setToggle("dualConnections", checked)
