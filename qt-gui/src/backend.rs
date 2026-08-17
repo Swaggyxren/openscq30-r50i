@@ -97,7 +97,31 @@ pub struct Backend {
     // Device information.
     serialNumber: qt_property!(String; NOTIFY infoChanged),
     firmwareVersion: qt_property!(String; NOTIFY infoChanged),
+    firmwareVersionLeft: qt_property!(String; NOTIFY infoChanged),
+    firmwareVersionRight: qt_property!(String; NOTIFY infoChanged),
+    twsStatus: qt_property!(String; NOTIFY infoChanged),
+    hostDevice: qt_property!(String; NOTIFY infoChanged),
     infoChanged: qt_signal!(),
+
+    // Sound modes.
+    noiseCancelingMode: qt_property!(String; NOTIFY soundModesChanged),
+    multiSceneNoiseCanceling: qt_property!(String; NOTIFY soundModesChanged),
+    manualNoiseCanceling: qt_property!(i32; NOTIFY soundModesChanged),
+    manualNoiseCancelingMin: qt_property!(i32; NOTIFY soundModesChanged),
+    manualNoiseCancelingMax: qt_property!(i32; NOTIFY soundModesChanged),
+    adaptiveNoiseCanceling: qt_property!(String; NOTIFY soundModesChanged),
+    ancSensitivity: qt_property!(i32; NOTIFY soundModesChanged),
+    ancSensitivityMin: qt_property!(i32; NOTIFY soundModesChanged),
+    ancSensitivityMax: qt_property!(i32; NOTIFY soundModesChanged),
+    soundModesChanged: qt_signal!(),
+
+    // Button configuration.
+    buttonActions: qt_property!(QVariantList; NOTIFY buttonConfigChanged),
+    buttonValues: qt_property!(QVariantList; NOTIFY buttonConfigChanged),
+    normalModeInCycle: qt_property!(bool; NOTIFY buttonConfigChanged),
+    transparencyModeInCycle: qt_property!(bool; NOTIFY buttonConfigChanged),
+    noiseCancelingModeInCycle: qt_property!(bool; NOTIFY buttonConfigChanged),
+    buttonConfigChanged: qt_signal!(),
 
     // QML-invokable methods.
     startup: qt_method!(fn(&mut self)),
@@ -175,7 +199,27 @@ impl Backend {
             eqPresets: QVariantList::default(),
             serialNumber: String::new(),
             firmwareVersion: String::new(),
+            firmwareVersionLeft: String::new(),
+            firmwareVersionRight: String::new(),
+            twsStatus: String::new(),
+            hostDevice: String::new(),
             infoChanged: Default::default(),
+            noiseCancelingMode: String::new(),
+            multiSceneNoiseCanceling: String::new(),
+            manualNoiseCanceling: 0,
+            manualNoiseCancelingMin: 0,
+            manualNoiseCancelingMax: 0,
+            adaptiveNoiseCanceling: String::new(),
+            ancSensitivity: 0,
+            ancSensitivityMin: 0,
+            ancSensitivityMax: 0,
+            soundModesChanged: Default::default(),
+            buttonActions: QVariantList::default(),
+            buttonValues: QVariantList::default(),
+            normalModeInCycle: false,
+            transparencyModeInCycle: false,
+            noiseCancelingModeInCycle: false,
+            buttonConfigChanged: Default::default(),
             startup: Default::default(),
             listDevices: Default::default(),
             pairAndConnect: Default::default(),
@@ -339,11 +383,68 @@ impl Backend {
         self.eqPresets = select_options(device.as_ref(), SettingId::PresetEqualizerProfile);
         self.eqPresetChanged();
 
+        // Sound modes.
+        self.noiseCancelingMode =
+            current_select_value(device.as_ref(), SettingId::NoiseCancelingMode)
+                .unwrap_or_default();
+        self.multiSceneNoiseCanceling =
+            current_select_value(device.as_ref(), SettingId::MultiSceneNoiseCanceling)
+                .unwrap_or_default();
+        let (value, min, max) = range_info(device.as_ref(), SettingId::ManualNoiseCanceling);
+        self.manualNoiseCanceling = value;
+        self.manualNoiseCancelingMin = min;
+        self.manualNoiseCancelingMax = max;
+        self.adaptiveNoiseCanceling =
+            information_value(device.as_ref(), SettingId::AdaptiveNoiseCanceling)
+                .unwrap_or_default();
+        let (value, min, max) = range_info(
+            device.as_ref(),
+            SettingId::AdaptiveNoiseCancelingSensitivityLevel,
+        );
+        self.ancSensitivity = value;
+        self.ancSensitivityMin = min;
+        self.ancSensitivityMax = max;
+        self.soundModesChanged();
+
+        // Button configuration.
+        self.buttonActions = select_options(device.as_ref(), SettingId::LeftSinglePress);
+        let button_ids = [
+            SettingId::LeftSinglePress,
+            SettingId::RightSinglePress,
+            SettingId::LeftDoublePress,
+            SettingId::RightDoublePress,
+            SettingId::LeftTriplePress,
+            SettingId::RightTriplePress,
+            SettingId::LeftLongPress,
+            SettingId::RightLongPress,
+        ];
+        let mut button_values = QVariantList::default();
+        for id in button_ids {
+            button_values.push(QVariant::from(QString::from(
+                current_select_value(device.as_ref(), id).unwrap_or_default(),
+            )));
+        }
+        self.buttonValues = button_values;
+        self.normalModeInCycle = toggle_value(device.as_ref(), SettingId::NormalModeInCycle);
+        self.transparencyModeInCycle =
+            toggle_value(device.as_ref(), SettingId::TransparencyModeInCycle);
+        self.noiseCancelingModeInCycle =
+            toggle_value(device.as_ref(), SettingId::NoiseCancelingModeInCycle);
+        self.buttonConfigChanged();
+
         // Device information.
         self.serialNumber =
             information_value(device.as_ref(), SettingId::SerialNumber).unwrap_or_default();
         self.firmwareVersion =
             information_value(device.as_ref(), SettingId::FirmwareVersion).unwrap_or_default();
+        self.firmwareVersionLeft =
+            information_value(device.as_ref(), SettingId::FirmwareVersionLeft).unwrap_or_default();
+        self.firmwareVersionRight =
+            information_value(device.as_ref(), SettingId::FirmwareVersionRight).unwrap_or_default();
+        self.twsStatus =
+            information_value(device.as_ref(), SettingId::TwsStatus).unwrap_or_default();
+        self.hostDevice =
+            information_value(device.as_ref(), SettingId::HostDevice).unwrap_or_default();
         self.infoChanged();
 
         self.rebuild_categories(device.as_ref());
@@ -753,6 +854,17 @@ fn toggle_value(device: &dyn OpenSCQ30Device, setting_id: SettingId) -> bool {
         device.setting(&setting_id),
         Some(Setting::Toggle { value: true })
     )
+}
+
+/// Returns `(value, min, max)` for an `I32Range` setting, defaulting to zeroes
+/// when the setting is absent or not a range.
+fn range_info(device: &dyn OpenSCQ30Device, setting_id: SettingId) -> (i32, i32, i32) {
+    match device.setting(&setting_id) {
+        Some(Setting::I32Range { setting, value }) => {
+            (value, *setting.range.start(), *setting.range.end())
+        }
+        _ => (0, 0, 0),
+    }
 }
 
 /// Returns the raw option names for a select-style setting as a QML list.

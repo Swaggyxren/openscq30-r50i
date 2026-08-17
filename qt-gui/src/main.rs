@@ -19,6 +19,12 @@ fn main() {
         )
         .init();
 
+    // Route QML/Qt log messages (console.log, property binding warnings, …)
+    // through the `log` facade into tracing so they reach stderr instead of
+    // being silently dropped.
+    let _ = tracing_log::LogTracer::init();
+    qmetaobject::log::init_qt_to_rust();
+
     // Create the Qt application. Must be on the main thread and before any QObject.
     let mut engine = QmlEngine::new();
 

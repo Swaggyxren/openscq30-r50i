@@ -348,10 +348,27 @@ KC.ApplicationWindow {
                 width: parent.width
                 spacing: Platform.Units.largeSpacing
 
-                // Sound mode
+                // A thin divider between sections.
+                Component {
+                    id: sectionDivider
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.topMargin: -Platform.Units.smallSpacing
+                        height: 1
+                        color: Platform.Theme.disabledTextColor
+                        opacity: 0.3
+                    }
+                }
+
+                // ---------------- Sound Modes ----------------
                 KC.Heading {
-                    text: "Sound Mode"
+                    text: "Sound Modes"
                     level: 2
+                }
+
+                QQC2.Label {
+                    text: "Ambient Sound Mode"
+                    Layout.fillWidth: true
                 }
                 QQC2.ButtonGroup {
                     id: settingsAncGroup
@@ -386,16 +403,113 @@ KC.ApplicationWindow {
                     }
                 }
 
-                // Equalizer
+                RowLayout {
+                    Layout.fillWidth: true
+                    QQC2.Label {
+                        text: "Noise Cancelling Mode"
+                        Layout.fillWidth: true
+                    }
+                    QQC2.ComboBox {
+                        model: ["Transport", "Outdoor", "Indoor", "Custom"]
+                        currentIndex: ["Transport", "Outdoor", "Indoor", "Custom"].indexOf(Backend.noiseCancelingMode)
+                        onActivated: (index) => Backend.setSelect("noiseCancelingMode", ["Transport", "Outdoor", "Indoor", "Custom"][index])
+                    }
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    QQC2.Label {
+                        text: "Multi-scene ANC"
+                        Layout.fillWidth: true
+                    }
+                    QQC2.ComboBox {
+                        model: ["Transport", "Outdoor", "Indoor"]
+                        currentIndex: ["Transport", "Outdoor", "Indoor"].indexOf(Backend.multiSceneNoiseCanceling)
+                        onActivated: (index) => Backend.setSelect("multiSceneNoiseCanceling", ["Transport", "Outdoor", "Indoor"][index])
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    QQC2.Label {
+                        text: "Manual Noise Cancelling"
+                        Layout.fillWidth: true
+                    }
+                    QQC2.Slider {
+                        Layout.fillWidth: true
+                        from: Backend.manualNoiseCancelingMin
+                        to: Backend.manualNoiseCancelingMax
+                        value: Backend.manualNoiseCanceling
+                        onMoved: Backend.setRange("manualNoiseCanceling", value)
+                    }
+                    QQC2.Label {
+                        text: Backend.manualNoiseCanceling
+                        Layout.minimumWidth: 24
+                        horizontalAlignment: Text.AlignRight
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    QQC2.Label {
+                        text: "Adaptive Noise Cancelling"
+                        Layout.fillWidth: true
+                    }
+                    QQC2.Label {
+                        text: Backend.adaptiveNoiseCanceling
+                        color: Platform.Theme.disabledTextColor
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    QQC2.Label {
+                        text: "ANC Sensitivity"
+                        Layout.fillWidth: true
+                    }
+                    QQC2.Slider {
+                        Layout.fillWidth: true
+                        from: Backend.ancSensitivityMin
+                        to: Backend.ancSensitivityMax
+                        value: Backend.ancSensitivity
+                        onMoved: Backend.setRange("adaptiveNoiseCancelingSensitivityLevel", value)
+                    }
+                    QQC2.Label {
+                        text: Backend.ancSensitivity
+                        Layout.minimumWidth: 24
+                        horizontalAlignment: Text.AlignRight
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    QQC2.Label {
+                        text: "Wind Noise Suppression"
+                        Layout.fillWidth: true
+                    }
+                    QQC2.Switch {
+                        checked: Backend.windNoiseSuppression
+                        onToggled: Backend.setToggle("windNoiseSuppression", checked)
+                    }
+                }
+
+                Loader { sourceComponent: sectionDivider }
+
+                // ---------------- Equalizer ----------------
                 KC.Heading {
                     text: "Equalizer"
                     level: 2
                 }
-                QQC2.ComboBox {
+                RowLayout {
                     Layout.fillWidth: true
-                    model: Backend.eqPresets
-                    currentIndex: Backend.eqPresets.indexOf(Backend.eqPreset)
-                    onActivated: (index) => Backend.setSelect("presetEqualizerProfile", Backend.eqPresets[index])
+                    QQC2.Label {
+                        text: "Preset"
+                        Layout.fillWidth: true
+                    }
+                    QQC2.ComboBox {
+                        model: Backend.eqPresets
+                        currentIndex: Backend.eqPresets.indexOf(Backend.eqPreset)
+                        onActivated: (index) => Backend.setSelect("presetEqualizerProfile", Backend.eqPresets[index])
+                    }
                 }
                 Repeater {
                     model: Backend.eqBands
@@ -422,7 +536,92 @@ KC.ApplicationWindow {
                     }
                 }
 
-                // Features
+                Loader { sourceComponent: sectionDivider }
+
+                // ---------------- Controls ----------------
+                KC.Heading {
+                    text: "Controls"
+                    level: 2
+                }
+
+                // Button press actions. The order matches the device: left, right,
+                // then double/triple/long per side.
+                Repeater {
+                    model: ListModel {
+                        ListElement { label: "Left Single Press"; settingId: "leftSinglePress"; valueIndex: 0 }
+                        ListElement { label: "Right Single Press"; settingId: "rightSinglePress"; valueIndex: 1 }
+                        ListElement { label: "Left Double Press"; settingId: "leftDoublePress"; valueIndex: 2 }
+                        ListElement { label: "Right Double Press"; settingId: "rightDoublePress"; valueIndex: 3 }
+                        ListElement { label: "Left Triple Press"; settingId: "leftTriplePress"; valueIndex: 4 }
+                        ListElement { label: "Right Triple Press"; settingId: "rightTriplePress"; valueIndex: 5 }
+                        ListElement { label: "Left Long Press"; settingId: "leftLongPress"; valueIndex: 6 }
+                        ListElement { label: "Right Long Press"; settingId: "rightLongPress"; valueIndex: 7 }
+                    }
+                    delegate: RowLayout {
+                        Layout.fillWidth: true
+                        QQC2.Label {
+                            text: model.label
+                            Layout.fillWidth: true
+                        }
+                        QQC2.ComboBox {
+                            model: Backend.buttonActions
+                            currentIndex: Backend.buttonActions.indexOf(Backend.buttonValues[model.valueIndex])
+                            onActivated: (index) => Backend.setSelect(model.settingId, Backend.buttonActions[index])
+                        }
+                    }
+                }
+
+                QQC2.Label {
+                    text: "Ambient Sound Mode Cycle"
+                    Layout.fillWidth: true
+                    Layout.topMargin: Platform.Units.smallSpacing
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    QQC2.Label {
+                        text: "Normal in Cycle"
+                        Layout.fillWidth: true
+                    }
+                    QQC2.Switch {
+                        checked: Backend.normalModeInCycle
+                        onToggled: Backend.setToggle("normalModeInCycle", checked)
+                    }
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    QQC2.Label {
+                        text: "Transparency in Cycle"
+                        Layout.fillWidth: true
+                    }
+                    QQC2.Switch {
+                        checked: Backend.transparencyModeInCycle
+                        onToggled: Backend.setToggle("transparencyModeInCycle", checked)
+                    }
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    QQC2.Label {
+                        text: "Noise Cancelling in Cycle"
+                        Layout.fillWidth: true
+                    }
+                    QQC2.Switch {
+                        checked: Backend.noiseCancelingModeInCycle
+                        onToggled: Backend.setToggle("noiseCancelingModeInCycle", checked)
+                    }
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    Item { Layout.fillWidth: true }
+                    QQC2.Button {
+                        text: "Reset to Default"
+                        icon.name: "edit-reset"
+                        onClicked: Backend.triggerAction("resetButtonsToDefault")
+                    }
+                }
+
+                Loader { sourceComponent: sectionDivider }
+
+                // ---------------- Features ----------------
                 KC.Heading {
                     text: "Features"
                     level: 2
@@ -471,19 +670,10 @@ KC.ApplicationWindow {
                         onToggled: Backend.setToggle("lowBatteryPrompt", checked)
                     }
                 }
-                RowLayout {
-                    Layout.fillWidth: true
-                    QQC2.Label {
-                        text: "Wind Noise Suppression"
-                        Layout.fillWidth: true
-                    }
-                    QQC2.Switch {
-                        checked: Backend.windNoiseSuppression
-                        onToggled: Backend.setToggle("windNoiseSuppression", checked)
-                    }
-                }
 
-                // Power
+                Loader { sourceComponent: sectionDivider }
+
+                // ---------------- Power ----------------
                 KC.Heading {
                     text: "Power"
                     level: 2
@@ -501,9 +691,11 @@ KC.ApplicationWindow {
                     }
                 }
 
-                // Device information
+                Loader { sourceComponent: sectionDivider }
+
+                // ---------------- Device Information ----------------
                 KC.Heading {
-                    text: "Device"
+                    text: "Device Information"
                     level: 2
                 }
                 RowLayout {
@@ -521,15 +713,53 @@ KC.ApplicationWindow {
                 RowLayout {
                     Layout.fillWidth: true
                     QQC2.Label {
-                        text: "Firmware"
+                        text: "Left Firmware"
                         Layout.fillWidth: true
                     }
                     QQC2.Label {
-                        text: Backend.firmwareVersion
+                        text: Backend.firmwareVersionLeft
                         color: Platform.Theme.disabledTextColor
                         textFormat: Text.PlainText
                     }
                 }
+                RowLayout {
+                    Layout.fillWidth: true
+                    QQC2.Label {
+                        text: "Right Firmware"
+                        Layout.fillWidth: true
+                    }
+                    QQC2.Label {
+                        text: Backend.firmwareVersionRight
+                        color: Platform.Theme.disabledTextColor
+                        textFormat: Text.PlainText
+                    }
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    QQC2.Label {
+                        text: "TWS Status"
+                        Layout.fillWidth: true
+                    }
+                    QQC2.Label {
+                        text: Backend.twsStatus
+                        color: Platform.Theme.disabledTextColor
+                        textFormat: Text.PlainText
+                    }
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    QQC2.Label {
+                        text: "Connected Device"
+                        Layout.fillWidth: true
+                    }
+                    QQC2.Label {
+                        text: Backend.hostDevice
+                        color: Platform.Theme.disabledTextColor
+                        textFormat: Text.PlainText
+                    }
+                }
+
+                Item { Layout.fillHeight: true }
             }
         }
     }
