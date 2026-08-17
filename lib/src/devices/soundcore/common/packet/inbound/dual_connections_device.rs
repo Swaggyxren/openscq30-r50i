@@ -1,7 +1,6 @@
 use nom::{
     IResult, Parser,
     error::{ContextError, ParseError, context},
-    number::complete::le_u8,
 };
 
 use crate::devices::soundcore::common::{
@@ -32,9 +31,9 @@ impl ToPacket for DualConnectionsDevicePacket {
     }
 
     fn body(&self) -> Vec<u8> {
-        [self.total_packets, self.current_packet_index]
-            .into_iter()
-            .chain(self.devices.iter().flat_map(|device| device.bytes()))
+        self.devices
+            .iter()
+            .flat_map(|device| device.bytes())
             .collect()
     }
 }
@@ -46,21 +45,29 @@ impl FromPacketBody for DualConnectionsDevicePacket {
         input: &'a [u8],
     ) -> IResult<&'a [u8], Self, E> {
         context("dual connection device", |input: &'a [u8]| {
-            let (mut input, (total_packets, current_packet_index)) =
-                (le_u8, le_u8).parse_complete(input)?;
-
+            // A3959 format: the body is a snapshot of the connected-device list.
+            // Each connected device is `[0x01, mac(6)]`. A single `[0x00]` byte
+            // marks the end of the list (no name, count header, or length prefix,
+            // unlike the a3936).
             let mut devices = Vec::new();
-            while !input.is_empty() {
-                let (remaining, device) = DualConnectionsDevice::take(input)?;
+            let mut rest = input;
+            while !rest.is_empty() {
+                // Determine whether this record is a device (flag == 1) or the
+                // end marker (flag == 0).
+                let flag = rest[0];
+                if flag == 0 {
+                    break;
+                }
+                let (remaining, device) = DualConnectionsDevice::take(rest)?;
                 devices.push(device);
-                input = remaining;
+                rest = remaining;
             }
 
             Ok((
-                &[] as &[u8], // name extends all the way to the end of the packet, so this empties out input
+                &[] as &[u8],
                 Self {
-                    total_packets,
-                    current_packet_index,
+                    total_packets: devices.len() as u8,
+                    current_packet_index: devices.len() as u8,
                     devices,
                 },
             ))
@@ -76,47 +83,50 @@ mod tests {
     use super::*;
 
     #[test]
-    fn round_trip() {
-        let initial = [
-            0x6, 0x1, 0x28, 0x1, 0x66, 0x14, 0x92, 0x2c, 0x3a, 0xd4, 0x50, 0x69, 0x78, 0x65, 0x6c,
-            0x20, 0x36, 0x61, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-        ];
+    fn empty_list() {
+        // `[0]` marks an empty device list / end of list.
+        let initial = [0x00];
         let (remaining, parsed) =
             DualConnectionsDevicePacket::take::<VerboseError<_>>(&initial).unwrap();
         assert_eq!(remaining.len(), 0);
-        assert_eq!(parsed.to_packet().body, initial);
+        assert!(parsed.devices.is_empty());
     }
 
     #[test]
-    fn no_string_null_termination() {
-        let initial = [
-            0x6, 0x1, 0x28, 0x1, 0x66, 0x14, 0x92, 0x2c, 0x3a, 0xd4, 0x50, 0x69, 0x78, 0x65, 0x6c,
-            0x20, 0x36, 0x61, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65,
-            65, 65, 65, 65, 65, 65, 65,
-        ];
+    fn single_device() {
+        // `[1, mac(6)]` — one connected device, no name field.
+        let initial = [0x01, 0x27, 0x65, 0xF4, 0x18, 0xB3, 0xE4];
         let (remaining, parsed) =
             DualConnectionsDevicePacket::take::<VerboseError<_>>(&initial).unwrap();
         assert_eq!(remaining.len(), 0);
         assert_eq!(parsed.devices.len(), 1);
-        assert_eq!(parsed.devices[0].name, "Pixel 6aAAAAAAAAAAAAAAAAAAAAAAAA");
+        assert!(parsed.devices[0].is_connected);
+        assert_eq!(
+            parsed.devices[0].mac_address.to_string(),
+            "27:65:F4:18:B3:E4"
+        );
+        assert_eq!(parsed.devices[0].name, "");
     }
 
     #[test]
-    fn multiple_devices_in_one_packet() {
+    fn multiple_devices_then_terminator() {
+        // Two connected devices followed by a `[0]` terminator.
         let initial = [
-            0x1, 0x1, // current/total
-            0x28, 0x1, 0x66, 0x14, 0x92, 0x2c, 0x3a, 0xd4, 0x50, 0x69, 0x78, 0x65, 0x6c, 0x20,
-            0x36, 0x61, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, // device 1
-            0x28, 0x1, 0x67, 0x14, 0x92, 0x2c, 0x3a, 0xd4, 0x50, 0x69, 0x78, 0x65, 0x6c, 0x20,
-            0x37, 0x61, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, // device 2
+            0x01, 0x27, 0x65, 0xF4, 0x18, 0xB3, 0xE4, // phone
+            0x01, 0x01, 0x00, 0x00, 0x46, 0x00, 0x00, // placeholder
+            0x00, // end of list
         ];
         let (remaining, parsed) =
             DualConnectionsDevicePacket::take::<VerboseError<_>>(&initial).unwrap();
         assert_eq!(remaining.len(), 0);
-        assert_eq!(parsed.devices[0].name, "Pixel 6a");
-        assert_eq!(parsed.devices[1].name, "Pixel 7a");
+        assert_eq!(parsed.devices.len(), 2);
+        assert_eq!(
+            parsed.devices[0].mac_address.to_string(),
+            "27:65:F4:18:B3:E4"
+        );
+        assert_eq!(
+            parsed.devices[1].mac_address.to_string(),
+            "01:00:00:46:00:00"
+        );
     }
 }
