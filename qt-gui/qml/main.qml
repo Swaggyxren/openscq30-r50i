@@ -439,7 +439,7 @@ KC.ApplicationWindow {
                         from: Backend.manualNoiseCancelingMin
                         to: Backend.manualNoiseCancelingMax
                         value: Backend.manualNoiseCanceling
-                        onMoved: Backend.setRange("manualNoiseCanceling", value)
+                        onPressedChanged: if (!pressed) Backend.setRange("manualNoiseCanceling", Math.round(value))
                     }
                     QQC2.Label {
                         text: Backend.manualNoiseCanceling
@@ -471,7 +471,7 @@ KC.ApplicationWindow {
                         from: Backend.ancSensitivityMin
                         to: Backend.ancSensitivityMax
                         value: Backend.ancSensitivity
-                        onMoved: Backend.setRange("adaptiveNoiseCancelingSensitivityLevel", value)
+                        onPressedChanged: if (!pressed) Backend.setRange("adaptiveNoiseCancelingSensitivityLevel", Math.round(value))
                     }
                     QQC2.Label {
                         text: Backend.ancSensitivity
@@ -526,7 +526,7 @@ KC.ApplicationWindow {
                             from: Backend.eqMin
                             to: Backend.eqMax
                             value: modelData
-                            onMoved: Backend.setEqualizerBand("volumeAdjustments", index, value)
+                            onPressedChanged: if (!pressed) Backend.setEqualizerBand("volumeAdjustments", index, Math.round(value))
                         }
                         QQC2.Label {
                             text: modelData
