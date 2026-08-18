@@ -537,7 +537,7 @@ pub mod test_utils {
                                 // default to no response for dual connections. a bit of a hack, but since dual
                                 // connections' correct response is 0 or more packets instead of the normal 1, we want
                                 // to send 0 packets, but lack an api for that.
-                                None if command == Command([0x0b, 0x02]) => {}
+                                None if command == Command([0x0b, 0x01]) => {}
                                 None => panic!("missing response for {command:?}")
                             }
                         }

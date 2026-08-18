@@ -50,9 +50,7 @@ where
 pub async fn take_dual_connection_devices(
     packet_io: &PacketIOController,
 ) -> device::Result<Vec<DualConnectionsDevice>> {
-    // The A3959 reports the connected-device list in one or more `[0x0b, 0x02]`
-    // packets, each a full snapshot, terminated by a `[0]` packet with no
-    // devices. Merge snapshots (dedup by MAC) and stop on the terminator.
+    // allow receiving packets out of order. this shouldn't happen, but just to be safe in case a device I'm not aware of does this.
     let mut devices: Vec<DualConnectionsDevice> = Vec::new();
     packet_io
         .send_with_multi_response(
@@ -68,17 +66,9 @@ pub async fn take_dual_connection_devices(
                     }
                 };
 
-                let is_end = packet.devices.is_empty();
-                for device in packet.devices {
-                    if !devices
-                        .iter()
-                        .any(|existing| existing.mac_address == device.mac_address)
-                    {
-                        devices.push(device);
-                    }
-                }
+                devices.extend(packet.devices);
 
-                !is_end
+                packet.current_packet_index != packet.total_packets
             },
             20,
         )
